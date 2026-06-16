@@ -313,12 +313,14 @@ failure result in Table 2.
 
 ### R3-Q3 — Does permuting input tokens change QIT-0's output?
 
-**Response**: This was not empirically tested in QIT-0. On parity, permutation
-invariance would be the *correct* behaviour, so testing it would not reveal a flaw —
-only confirm the expected property. The meaningful test is whether QIT-0 correctly
-handles a positionally-sensitive task, which first-token detection addresses. We
-acknowledge in §4.1 that permutation sensitivity remains to be tested on a task where
-the correct answer *is* permutation-sensitive.
+**Response**: Yes — and we now provide direct experimental evidence. The adjacent order
+task (new in this revision, §4.6) has 14 multiset-conflicting input pairs: sequences
+with identical token multisets but different labels. For example, [0,1,0,0] (label=1)
+and [1,0,0,0] (label=0) contain the same tokens {0,0,0,1} but in different order.
+QIT-0 converges to 99%+ accuracy on this task (9.6 ± 1.4 epochs, 5/5 seeds), which is
+only possible if the model correctly distinguishes these pairs — i.e., if it responds
+to token order, not just token identity. This directly answers R3-Q3 with data rather
+than assertion.
 
 ---
 
@@ -346,12 +348,22 @@ engineering" alternative explanation, and it fails, which rules out that explana
 
 ### DA-C2 [Evidence Selection Bias] — Only parity tested; consistent with cherry-picking
 
-**Response**: Addressed. The revised paper includes five tasks (§4.6, Table 5):
+**Response**: Addressed. The revised paper includes six tasks (§4.6, Table 5):
 2-bit partial parity, 3-bit partial parity, 4-bit full parity, first-token detection
-(negative control), and palindrome detection. QIT-0 shows consistent advantages on
-the three parity tasks and palindrome (all F₂-structured), and **no advantage** on
-first-token detection. This is the opposite of cherry-picking: we report a task where
-QIT does not win and discuss why.
+(negative control), palindrome detection, and — new in this revision — **adjacent order**
+(label = x[0]=0 AND x[1]=1).
+
+Adjacent order is strictly positional: 14 of the 16 inputs belong to multiset-conflicting
+pairs where two sequences with the same token bag carry different labels. No set-invariant
+model can exceed the 75% majority-class baseline. QIT-0 converges at 9.6 ± 1.4 epochs
+(5/5 seeds), proving it uses positional structure. Critically, QIT is **not faster** than
+MLP (6.0 ± 2.8, 5/5) on this task — consistent with the paper's claim that the advantage
+is F₂-structural, not universal.
+
+The full six-task picture is now:
+- F₂-structured tasks (parity family, palindrome): QIT wins on speed and reliability
+- Positional tasks without F₂ structure (first-token, adjacent order): QIT competes but does not dominate
+- This is the opposite of cherry-picking: QIT loses two out of six comparisons and we report and explain both.
 
 ---
 
@@ -385,11 +397,16 @@ inductive bias of learned models, not about algorithmic optimality.
 
 ### DA Unexamined Premise — Parity is permutation-invariant; QIT may be a set classifier
 
-**Response**: Addressed above under R3-W4. Permutation invariance is now noted
-explicitly in §4.1. The first-token detection task is included as evidence that QIT
-can use positional information when the task requires it. The definitive test (a
-positionally-sensitive non-trivial task) is the primary goal of QIT-1 experiments and
-is stated explicitly in §5.
+**Response**: This premise is now directly falsified by experiment. The adjacent order
+task (§4.6, new in this revision) is defined so that no set-invariant model can exceed
+75% accuracy: it has 14 multiset-conflicting input pairs where sequences sharing the
+same token bag carry opposite labels. QIT-0 achieves 99%+ accuracy (9.6 ± 1.4 epochs,
+5/5 seeds), which requires correctly resolving these pairs based on token order.
+
+QIT-0 is therefore not a set classifier. The permutation invariance of parity is
+acknowledged explicitly in §4.1, and the adjacent order result closes the gap: QIT
+learns position-dependent tasks when the task demands it, and gains an additional
+inductive bias advantage specifically when the task has F₂-linear phase structure.
 
 ---
 
@@ -412,7 +429,7 @@ is stated explicitly in §5.
 | S7 | Shot-count analysis | Flagged in §5; hardware access needed |
 | — | Removed "12–58× faster" headline (single-run artefact) | Replaced throughout |
 | — | U_ent "critical" claim corrected to "helpful but not required" | §4.3 |
-| — | Task variety benchmark: 5 tasks, 5 seeds each | §4.6, Table 5, Fig. 5 |
+| — | Task variety benchmark: 6 tasks, 5 seeds each (incl. adjacent order positional probe) | §4.6, Table 5, Fig. 5 |
 
 We believe the revised manuscript addresses every required and suggested revision.
 The core claim — that interference-based attention exhibits measurable inductive bias

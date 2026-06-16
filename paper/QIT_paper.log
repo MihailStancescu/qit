@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.1)  16 JUN 2026 16:04
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.3.1)  16 JUN 2026 19:57
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -670,13 +670,12 @@ Package microtype Info: Loading generic protrusion settings for font family
 LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <10> not available
 (Font)              Font shape `T1/lmtt/b/n' tried instead on input line 319.
 
-[6] [7] [8]
+[6] [7] [8] [9]
 LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 5
-81.
+84.
  (/usr/local/texlive/2026basic/texmf-dist/tex/latex/lm/ts1lmr.fd
 File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
-[9]
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
@@ -685,52 +684,51 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 File: ../results/benchmark_full_parity.png Graphic file (type png)
 <use ../results/benchmark_full_parity.png>
 Package pdftex.def Info: ../results/benchmark_full_parity.png  used on input li
-ne 712.
+ne 715.
 (pdftex.def)             Requested size: 424.06033pt x 122.33339pt.
 
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
 [11]
-<../results/benchmark_full_ablation.png, id=371, 569.9694pt x 280.8894pt>
+<../results/benchmark_full_ablation.png, id=370, 569.9694pt x 280.8894pt>
 File: ../results/benchmark_full_ablation.png Graphic file (type png)
 <use ../results/benchmark_full_ablation.png>
 Package pdftex.def Info: ../results/benchmark_full_ablation.png  used on input 
-line 759.
+line 762.
 (pdftex.def)             Requested size: 275.63663pt x 135.84117pt.
  [12 <../results/benchmark_full_parity.png>]
-<../results/benchmark_full_firsttoken.png, id=385, 498.1812pt x 280.8894pt>
+<../results/benchmark_full_firsttoken.png, id=384, 498.1812pt x 280.8894pt>
 File: ../results/benchmark_full_firsttoken.png Graphic file (type png)
 <use ../results/benchmark_full_firsttoken.png>
 Package pdftex.def Info: ../results/benchmark_full_firsttoken.png  used on inpu
-t line 820.
+t line 823.
 (pdftex.def)             Requested size: 233.23447pt x 131.50371pt.
- [13 <../results/benchmark_full_ablation.png> <../results/benchmark_full_firstt
-oken.png>] [14]
+ [13 <../results/benchmark_full_ablation.png>]
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+[14 <../results/benchmark_full_firsttoken.png>]
 <../results/benchmark_tasks.png, id=403, 1148.1294pt x 424.9476pt>
 File: ../results/benchmark_tasks.png Graphic file (type png)
 <use ../results/benchmark_tasks.png>
-Package pdftex.def Info: ../results/benchmark_tasks.png  used on input line 911
+Package pdftex.def Info: ../results/benchmark_tasks.png  used on input line 945
 .
 (pdftex.def)             Requested size: 318.04524pt x 117.71361pt.
- [15 <../results/benchmark_tasks.png>] [16] [17] (./QIT_paper.bbl [18]) [19] [2
-0]
-(./QIT_paper.aux)
+ [15] [16 <../results/benchmark_tasks.png>] [17] [18] (./QIT_paper.bbl [19]) [2
+0] [21] (./QIT_paper.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
  ***********
 Package rerunfilecheck Info: File `QIT_paper.out' has not changed.
-(rerunfilecheck)             Checksum: 2F3ACA27D1DC5D410EA7E56F4CC8C03E;7581.
+(rerunfilecheck)             Checksum: BE28A9831712C78CDB4321C340B83F70;7702.
  ) 
 Here is how much of TeX's memory you used:
- 16163 strings out of 469006
- 247517 string characters out of 5454814
- 1005325 words of memory out of 5000000
+ 16176 strings out of 469006
+ 247650 string characters out of 5454814
+ 936435 words of memory out of 5000000
  44164 multiletter control sequences out of 15000+600000
- 745806 words of font info for 266 fonts, out of 8000000 for 9000
+ 746373 words of font info for 272 fonts, out of 8000000 for 9000
  319 hyphenation exceptions out of 8191
- 75i,15n,84p,1002b,1081s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,15n,84p,1002b,1982s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2026basic/texmf-dist/fonts/type1/public/lm/lmbx10.pfb></u
 sr/local/texlive/2026basic/texmf-dist/fonts/type1/public/lm/lmbx12.pfb></usr/lo
 cal/texlive/2026basic/texmf-dist/fonts/type1/public/lm/lmbx8.pfb></usr/local/te
@@ -749,10 +747,10 @@ r/local/texlive/2026basic/texmf-dist/fonts/type1/public/lm/lmsy8.pfb></usr/loca
 l/texlive/2026basic/texmf-dist/fonts/type1/public/lm/lmtk10.pfb></usr/local/tex
 live/2026basic/texmf-dist/fonts/type1/public/lm/lmtt10.pfb></usr/local/texlive/
 2026basic/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
-Output written on QIT_paper.pdf (20 pages, 733295 bytes).
+Output written on QIT_paper.pdf (21 pages, 740726 bytes).
 PDF statistics:
- 614 PDF objects out of 1000 (max. 8388607)
- 535 compressed objects within 6 object streams
- 155 named destinations out of 1000 (max. 500000)
+ 618 PDF objects out of 1000 (max. 8388607)
+ 538 compressed objects within 6 object streams
+ 156 named destinations out of 1000 (max. 500000)
  63341 words of extra memory for PDF output out of 74296 (max. 10000000)
 

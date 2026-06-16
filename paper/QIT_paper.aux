@@ -82,10 +82,10 @@
 \citation{cerezo2023does}
 \@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Parity benchmark (5~seeds): test-accuracy learning curves, convergence epoch (mean\,$\pm $\,std bars), and wall-clock time per epoch.}}{12}{figure.2}\protected@file@percent }
 \newlabel{fig:benchmark}{{2}{12}{Parity benchmark (5~seeds): test-accuracy learning curves, convergence epoch (mean\,$\pm $\,std bars), and wall-clock time per epoch}{figure.2}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Ablation study — entanglement topology. All variants share the same 78-parameter budget. ``DNF (k/5)'' = $k$ seeds converged.}}{12}{table.6}\protected@file@percent }
-\newlabel{tab:ablation}{{6}{12}{Ablation study — entanglement topology. All variants share the same 78-parameter budget. ``DNF (k/5)'' = $k$ seeds converged}{table.6}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Ablation Study}{12}{subsection.5.4}\protected@file@percent }
 \newlabel{sec:ablations}{{5.4}{12}{Ablation Study}{subsection.5.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Ablation study — entanglement topology. All variants share the same 78-parameter budget. ``DNF (k/5)'' = $k$ seeds converged.}}{12}{table.6}\protected@file@percent }
+\newlabel{tab:ablation}{{6}{12}{Ablation study — entanglement topology. All variants share the same 78-parameter budget. ``DNF (k/5)'' = $k$ seeds converged}{table.6}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Gradient Variance Analysis}{12}{subsection.5.5}\protected@file@percent }
 \newlabel{sec:gradvar}{{5.5}{12}{Gradient Variance Analysis}{subsection.5.5}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Ablation: convergence epochs (mean\,$\pm $\,std) for four QIT-0 variants on parity (5 seeds each).}}{13}{figure.3}\protected@file@percent }
@@ -94,30 +94,32 @@
 \newlabel{sec:firsttoken}{{5.6}{13}{First-Token Detection (Negative Control)}{subsection.5.6}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces First-token detection (5 seeds). A task with positional structure but no quantum phase affinity, serving as a negative control.}}{13}{table.7}\protected@file@percent }
 \newlabel{tab:firsttoken}{{7}{13}{First-token detection (5 seeds). A task with positional structure but no quantum phase affinity, serving as a negative control}{table.7}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces First-token detection (negative control): convergence epoch comparison (5 seeds each). QIT-0 is not faster than classical models on this positional task with no quantum phase structure.}}{13}{figure.4}\protected@file@percent }
-\newlabel{fig:firsttoken}{{4}{13}{First-token detection (negative control): convergence epoch comparison (5 seeds each). QIT-0 is not faster than classical models on this positional task with no quantum phase structure}{figure.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.7}Task Variety: Parity Scaling and Structural Generality}{14}{subsection.5.7}\protected@file@percent }
-\newlabel{sec:taskvariety}{{5.7}{14}{Task Variety: Parity Scaling and Structural Generality}{subsection.5.7}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Task variety benchmark (5 seeds each). Convergence $\ge 99\%$ test accuracy. ``Conv/5'' = number of seeds that converged within the epoch limit.}}{14}{table.8}\protected@file@percent }
-\newlabel{tab:taskvariety}{{8}{14}{Task variety benchmark (5 seeds each). Convergence $\ge 99\%$ test accuracy. ``Conv/5'' = number of seeds that converged within the epoch limit}{table.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.7}Task Variety: Parity Scaling, Structural Generality, and Sequence Sensitivity}{13}{subsection.5.7}\protected@file@percent }
+\newlabel{sec:taskvariety}{{5.7}{13}{Task Variety: Parity Scaling, Structural Generality, and Sequence Sensitivity}{subsection.5.7}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces First-token detection (negative control): convergence epoch comparison (5 seeds each). QIT-0 is not faster than classical models on this positional task with no quantum phase structure.}}{14}{figure.4}\protected@file@percent }
+\newlabel{fig:firsttoken}{{4}{14}{First-token detection (negative control): convergence epoch comparison (5 seeds each). QIT-0 is not faster than classical models on this positional task with no quantum phase structure}{figure.4}{}}
 \citation{bernstein1997quantum}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Task variety benchmark (5 seeds). \textit  {Left}: convergence epoch by task and model (DNF shown at epoch limit). \textit  {Right}: QIT-0 parity-degree scaling --- a monotonic, graceful increase from $4.6\pm 1.0$ (2-bit) to $6.2\pm 1.7$ (4-bit).}}{15}{figure.5}\protected@file@percent }
-\newlabel{fig:taskvariety}{{5}{15}{Task variety benchmark (5 seeds). \textit {Left}: convergence epoch by task and model (DNF shown at epoch limit). \textit {Right}: QIT-0 parity-degree scaling --- a monotonic, graceful increase from $4.6\pm 1.0$ (2-bit) to $6.2\pm 1.7$ (4-bit)}{figure.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Task variety benchmark (5 seeds each). Convergence $\ge 99\%$ test accuracy. ``Conv/5'' = number of seeds that converged within the epoch limit. $\dagger $ = task with 75\% majority-class baseline (4/16 positives).}}{15}{table.8}\protected@file@percent }
+\newlabel{tab:taskvariety}{{8}{15}{Task variety benchmark (5 seeds each). Convergence $\ge 99\%$ test accuracy. ``Conv/5'' = number of seeds that converged within the epoch limit. $\dagger $ = task with 75\% majority-class baseline (4/16 positives)}{table.8}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {6}Discussion}{15}{section.6}\protected@file@percent }
 \newlabel{sec:discussion}{{6}{15}{Discussion}{section.6}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Why Does QIT Converge So Fast on Parity?}{15}{subsection.6.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Task variety benchmark (5 seeds). \textit  {Left}: convergence epoch by task and model (DNF or epoch limit shown for non-converging seeds). \textit  {Right}: QIT-0 parity-degree scaling --- a monotonic, graceful increase from $4.6\pm 1.0$ (2-bit) to $6.2\pm 1.7$ (4-bit).}}{16}{figure.5}\protected@file@percent }
+\newlabel{fig:taskvariety}{{5}{16}{Task variety benchmark (5 seeds). \textit {Left}: convergence epoch by task and model (DNF or epoch limit shown for non-converging seeds). \textit {Right}: QIT-0 parity-degree scaling --- a monotonic, graceful increase from $4.6\pm 1.0$ (2-bit) to $6.2\pm 1.7$ (4-bit)}{figure.5}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Limitations of QIT-0}{16}{subsection.6.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}What This Work Claims and Does Not Claim}{16}{subsection.6.3}\protected@file@percent }
-\citation{preskill2018quantum}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}What This Work Claims and Does Not Claim}{17}{subsection.6.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {7}Future Work}{17}{section.7}\protected@file@percent }
 \newlabel{sec:future}{{7}{17}{Future Work}{section.7}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {7.1}QIT-1: Larger Circuits \textcolor {gray!70!black}{\textbf  {[Planned]}}{}}{17}{subsection.7.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Ablation Studies}{17}{subsection.7.2}\protected@file@percent }
 \newlabel{sec:ablations_future}{{7.2}{17}{Ablation Studies}{subsection.7.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Tasks Beyond Parity}{17}{subsection.7.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.4}Interference Visualisation \textcolor {gray!70!black}{\textbf  {[Planned]}}{}}{17}{subsection.7.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.5}Real Hardware Evaluation \textcolor {gray!70!black}{\textbf  {[Planned]}}{}}{17}{subsection.7.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.6}Scaling Laws \textcolor {gray!70!black}{\textbf  {[Planned]}}{}}{17}{subsection.7.6}\protected@file@percent }
+\citation{preskill2018quantum}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Tasks Beyond Parity}{18}{subsection.7.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.4}Interference Visualisation \textcolor {gray!70!black}{\textbf  {[Planned]}}{}}{18}{subsection.7.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.5}Real Hardware Evaluation \textcolor {gray!70!black}{\textbf  {[Planned]}}{}}{18}{subsection.7.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.6}Scaling Laws \textcolor {gray!70!black}{\textbf  {[Planned]}}{}}{18}{subsection.7.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Conclusion}{18}{section.8}\protected@file@percent }
+\newlabel{sec:conclusion}{{8}{18}{Conclusion}{section.8}{}}
 \bibstyle{plainnat}
 \bibdata{references}
 \bibcite{abbas2021power}{{1}{2021}{{Abbas et~al.}}{{Abbas, Sutter, Zoufal, Lucchi, Figalli, and Woerner}}}
@@ -126,8 +128,6 @@
 \bibcite{bernstein1997quantum}{{4}{1997}{{Bernstein and Vazirani}}{{}}}
 \bibcite{biamonte2017quantum}{{5}{2017}{{Biamonte et~al.}}{{Biamonte, Wittek, Pancotti, Rebentrost, Wiebe, and Lloyd}}}
 \bibcite{bowles2024benchmarking}{{6}{2024}{{Bowles et~al.}}{{Bowles, Ahmed, and Schuld}}}
-\@writefile{toc}{\contentsline {section}{\numberline {8}Conclusion}{18}{section.8}\protected@file@percent }
-\newlabel{sec:conclusion}{{8}{18}{Conclusion}{section.8}{}}
 \bibcite{cerezo2021variational}{{7}{2021}{{Cerezo et~al.}}{{Cerezo, Arrasmith, Babbush, Benjamin, Endo, Fujii, McClean, Mitarai, Yuan, Cincio, and Coles}}}
 \bibcite{cerezo2023does}{{8}{2023}{{Cerezo et~al.}}{{Cerezo, Larocca, Garc{\'\i }a-Mart{\'\i }n, Diaz, Braccia, Fontana, Rudolph, Bermejo-Vega, Ragone, and Coles}}}
 \bibcite{deutsch1992rapid}{{9}{1992}{{Deutsch and Jozsa}}{{}}}
@@ -142,6 +142,6 @@
 \bibcite{vaswani2017attention}{{18}{2017}{{Vaswani et~al.}}{{Vaswani, Shazeer, Parmar, Uszkoreit, Jones, Gomez, Kaiser, and Polosukhin}}}
 \@writefile{toc}{\contentsline {section}{\numberline {A}QIT-0 Configuration Summary}{20}{appendix.A}\protected@file@percent }
 \newlabel{app:config}{{A}{20}{QIT-0 Configuration Summary}{appendix.A}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {B}Baseline Architecture Summaries}{20}{appendix.B}\protected@file@percent }
-\newlabel{app:baselines}{{B}{20}{Baseline Architecture Summaries}{appendix.B}{}}
-\gdef \@abspage@last{20}
+\@writefile{toc}{\contentsline {section}{\numberline {B}Baseline Architecture Summaries}{21}{appendix.B}\protected@file@percent }
+\newlabel{app:baselines}{{B}{21}{Baseline Architecture Summaries}{appendix.B}{}}
+\gdef \@abspage@last{21}

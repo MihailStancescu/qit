@@ -565,9 +565,12 @@ first benchmark for QIT:
 function: the label does not change if the input tokens are reordered. Testing QIT on
 parity therefore does not verify sequential processing capabilities per se. QIT's ring
 CNOT topology does encode positional information (qubit $2t$ connects to qubit $2(t{+}1\bmod n)$),
-but this information is superfluous for parity. We include a positionally-sensitive
-negative-control task (first-token detection, \S\ref{sec:firsttoken}) to assess QIT's
-behaviour on a task where position matters and quantum phase structure does not apply.
+but this information is superfluous for parity. We directly address whether QIT is a
+sequence model or merely a set classifier with two positional tasks in
+\S\ref{sec:taskvariety}: \emph{first-token detection} (single-token lookup) and
+\emph{adjacent order} (label = $x_0{=}0 \wedge x_1{=}1$), which has 14 multiset-conflicting
+input pairs --- meaning no set-invariant model can solve it. QIT converges on both,
+confirming it exploits positional structure when the task requires it.
 
 \subsection{Experimental Setup}
 
@@ -824,27 +827,33 @@ on small datasets.
 \label{fig:firsttoken}
 \end{figure}
 
-\subsection{Task Variety: Parity Scaling and Structural Generality}
+\subsection{Task Variety: Parity Scaling, Structural Generality, and Sequence Sensitivity}
 \label{sec:taskvariety}
 
 Having established QIT-0's advantage on 4-bit parity and its absence on first-token
-detection, we ask two further questions: (1)~does the advantage scale gracefully with
+detection, we ask three further questions: (1)~does the advantage scale gracefully with
 parity degree, or is 4-bit an artefact? (2)~does QIT's inductive bias extend beyond
-global parity to other XOR-structured tasks?
+global parity to other XOR-structured tasks? (3)~is QIT a genuine \emph{sequence} model,
+or only a set classifier that ignores token order?
 
-We evaluate five tasks under the same 5-seed memorisation protocol (all 16 inputs):
+We evaluate six tasks under the same 5-seed memorisation protocol (all 16 inputs):
 \textbf{2-bit partial parity} ($x_0 \oplus x_1$),
 \textbf{3-bit partial parity} ($x_0 \oplus x_1 \oplus x_2$),
 \textbf{4-bit full parity} (main benchmark),
-\textbf{first-token detection} (positional negative control), and
-\textbf{palindrome detection} (predict whether $\mathbf{x} = \text{reverse}(\mathbf{x})$).
-Palindromes are 4/16 of all inputs, giving a 75\% majority-class baseline.
+\textbf{first-token detection} (positional negative control),
+\textbf{palindrome detection} (predict whether $\mathbf{x} = \text{reverse}(\mathbf{x})$,
+4/16 positives; 75\% majority-class baseline), and
+\textbf{adjacent order} (predict whether $x_0{=}0$ and $x_1{=}1$, i.e.\ $x_0 < x_1$;
+4/16 positives; 75\% majority-class baseline).
+Adjacent order is \emph{strictly} positional: 14 of 16 input pairs that share the same
+token multiset carry different labels, so no set-invariant model can achieve $>75\%$ accuracy.
 Table~\ref{tab:taskvariety} reports convergence epochs.
 
 \begin{table}[h]
 \centering
 \caption{Task variety benchmark (5 seeds each). Convergence $\ge99\%$ test accuracy.
-         ``Conv/5'' = number of seeds that converged within the epoch limit.}
+         ``Conv/5'' = number of seeds that converged within the epoch limit.
+         $\dagger$ = task with 75\% majority-class baseline (4/16 positives).}
 \label{tab:taskvariety}
 \begin{tabular}{@{}lrll@{}}
 \toprule
@@ -870,10 +879,15 @@ Model & Params & Conv.\ Ep.\ (mean$\pm$std) & Conv/5 \\
 \quad MLP            & 94          & $3.4\pm3.3$ & 5/5 \\
 \quad Transformer    & 206         & $5.8\pm1.7$ & 5/5 \\
 \midrule
-\multicolumn{4}{@{}l}{\textit{Palindrome detection ($\mathbf{x} = \mathrm{rev}(\mathbf{x})$)}} \\[1pt]
+\multicolumn{4}{@{}l}{\textit{Palindrome detection ($\mathbf{x} = \mathrm{rev}(\mathbf{x})$)$^\dagger$}} \\[1pt]
 \quad\textbf{QIT-0}  & \textbf{78} & $\mathbf{13.2\pm3.2}$ & 5/5 \\
 \quad MLP            & 94          & $53.4\pm54.5$          & 5/5 \\
 \quad Transformer    & 206         & $55.0\pm0.0$           & 1/5 \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Adjacent order ($x_0{=}0 \wedge x_1{=}1$) --- positional set-classifier probe$^\dagger$}} \\[1pt]
+\quad QIT-0          & 78  & $9.6\pm1.4$  & 5/5 \\
+\quad\textbf{MLP}    & \textbf{94}  & $\mathbf{6.0\pm2.8}$ & 5/5 \\
+\quad Transformer    & 206 & $32.2\pm31.4$ & 5/5 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -906,13 +920,33 @@ models converge at similar rates ($\approx$3--6 epochs, 5/5 seeds). The contrast
 clear: tasks with $\mathbb{F}_2$-structured relational checks favour QIT; tasks that
 depend on a single token's value do not.
 
+\textbf{Adjacent order: QIT as a sequence model, not a set classifier.}
+The adjacent order task (label $= x_0{=}0 \wedge x_1{=}1$) is designed to directly
+test whether QIT uses token positions or merely aggregates a bag of tokens.
+It has 14 multiset-conflicting input pairs: for example, $[0,1,0,0]$ (label~$= 1$) and
+$[1,0,0,0]$ (label~$= 0$) share the same token multiset $\{0,0,0,1\}$ but carry opposite
+labels. Any model that treats the input as an unordered set is limited to the 75\%
+majority-class baseline.
+
+QIT-0 converges in $9.6\pm1.4$ epochs (5/5 seeds), well above the 75\% baseline,
+confirming that it correctly uses positional structure. As expected, QIT is
+\emph{not faster} than MLP ($6.0\pm2.8$, 5/5 seeds) on this task: there is no
+$\mathbb{F}_2$-phase structure to exploit, so the interference inductive bias provides
+no advantage. The Transformer converges on all 5 seeds but with high variance ($32.2\pm31.4$).
+
+Taken together with first-token detection, this establishes the full picture:
+QIT-0 can process positional information when required (adjacent order, first-token),
+gains a large advantage when the task has $\mathbb{F}_2$ phase structure (parity family,
+palindrome), and gains no advantage on positional tasks without that structure.
+This rules out the hypothesis that QIT is a set classifier.
+
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.75\textwidth]{../results/benchmark_tasks.png}
 \caption{Task variety benchmark (5 seeds). \textit{Left}: convergence epoch by task
-         and model (DNF shown at epoch limit). \textit{Right}: QIT-0 parity-degree
-         scaling --- a monotonic, graceful increase from $4.6\pm1.0$ (2-bit) to
-         $6.2\pm1.7$ (4-bit).}
+         and model (DNF or epoch limit shown for non-converging seeds). \textit{Right}:
+         QIT-0 parity-degree scaling --- a monotonic, graceful increase from
+         $4.6\pm1.0$ (2-bit) to $6.2\pm1.7$ (4-bit).}
 \label{fig:taskvariety}
 \end{figure}
 
@@ -1093,13 +1127,17 @@ GRU on 2/5 seeds (34.5\,$\pm$\,5.5 epochs), and the Transformer on 0/5 seeds in 
 An ablation confirms that the learned interference operator $\Uatt$ is the key driver;
 pre-entanglement ($\Uent$) is helpful but not strictly required for this task.
 
-A five-task variety experiment (\S\ref{sec:taskvariety}) strengthens the picture.
+A six-task variety experiment (\S\ref{sec:taskvariety}) strengthens the picture.
 On $\mathbb{F}_2$-structured tasks, QIT-0 is consistently fast: partial parity
 scales gracefully (4.6$\pm$1.0 epochs at 2-bit, 5.0$\pm$2.2 at 3-bit, 6.2$\pm$1.7 at
 4-bit, all 5/5 seeds), and palindrome detection (a conjunction of position-pair XOR
 checks) converges in 13.2$\pm$3.2 epochs versus 53 for MLP and DNF for the Transformer.
-On a purely positional task (first-token detection), QIT-0 is \emph{not} faster than
-classical models --- confirming the advantage is structurally specific, not universal.
+On positional tasks without $\mathbb{F}_2$ structure --- first-token detection and the
+adjacent order task (label $= x_0{=}0 \wedge x_1{=}1$) --- QIT-0 is \emph{not} faster
+than classical models but converges reliably on all 5 seeds.
+The adjacent order task is strictly positional (14 multiset-conflicting input pairs;
+no set-invariant model can exceed 75\% accuracy), and QIT-0's convergence at 99\%+
+accuracy confirms it operates as a sequence model, not a set classifier.
 
 The result supports the core claim: \emph{for tasks whose structure maps naturally to
 quantum phase dynamics, interference-based attention exhibits strong inductive bias and

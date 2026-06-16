@@ -26,18 +26,18 @@
 \contentsline {subsection}{\numberline {5.4}Ablation Study}{12}{subsection.5.4}%
 \contentsline {subsection}{\numberline {5.5}Gradient Variance Analysis}{12}{subsection.5.5}%
 \contentsline {subsection}{\numberline {5.6}First-Token Detection (Negative Control)}{13}{subsection.5.6}%
-\contentsline {subsection}{\numberline {5.7}Task Variety: Parity Scaling and Structural Generality}{14}{subsection.5.7}%
+\contentsline {subsection}{\numberline {5.7}Task Variety: Parity Scaling, Structural Generality, and Sequence Sensitivity}{13}{subsection.5.7}%
 \contentsline {section}{\numberline {6}Discussion}{15}{section.6}%
 \contentsline {subsection}{\numberline {6.1}Why Does QIT Converge So Fast on Parity?}{15}{subsection.6.1}%
 \contentsline {subsection}{\numberline {6.2}Limitations of QIT-0}{16}{subsection.6.2}%
-\contentsline {subsection}{\numberline {6.3}What This Work Claims and Does Not Claim}{16}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.3}What This Work Claims and Does Not Claim}{17}{subsection.6.3}%
 \contentsline {section}{\numberline {7}Future Work}{17}{section.7}%
 \contentsline {subsection}{\numberline {7.1}QIT-1: Larger Circuits \textcolor {gray!70!black}{\textbf {[Planned]}}{}}{17}{subsection.7.1}%
 \contentsline {subsection}{\numberline {7.2}Ablation Studies}{17}{subsection.7.2}%
-\contentsline {subsection}{\numberline {7.3}Tasks Beyond Parity}{17}{subsection.7.3}%
-\contentsline {subsection}{\numberline {7.4}Interference Visualisation \textcolor {gray!70!black}{\textbf {[Planned]}}{}}{17}{subsection.7.4}%
-\contentsline {subsection}{\numberline {7.5}Real Hardware Evaluation \textcolor {gray!70!black}{\textbf {[Planned]}}{}}{17}{subsection.7.5}%
-\contentsline {subsection}{\numberline {7.6}Scaling Laws \textcolor {gray!70!black}{\textbf {[Planned]}}{}}{17}{subsection.7.6}%
+\contentsline {subsection}{\numberline {7.3}Tasks Beyond Parity}{18}{subsection.7.3}%
+\contentsline {subsection}{\numberline {7.4}Interference Visualisation \textcolor {gray!70!black}{\textbf {[Planned]}}{}}{18}{subsection.7.4}%
+\contentsline {subsection}{\numberline {7.5}Real Hardware Evaluation \textcolor {gray!70!black}{\textbf {[Planned]}}{}}{18}{subsection.7.5}%
+\contentsline {subsection}{\numberline {7.6}Scaling Laws \textcolor {gray!70!black}{\textbf {[Planned]}}{}}{18}{subsection.7.6}%
 \contentsline {section}{\numberline {8}Conclusion}{18}{section.8}%
 \contentsline {section}{\numberline {A}QIT-0 Configuration Summary}{20}{appendix.A}%
-\contentsline {section}{\numberline {B}Baseline Architecture Summaries}{20}{appendix.B}%
+\contentsline {section}{\numberline {B}Baseline Architecture Summaries}{21}{appendix.B}%
