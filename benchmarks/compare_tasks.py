@@ -37,6 +37,7 @@ from tasks.structured_tasks import (
     make_xor_positions_loaders,
     make_partial_parity_loaders,
     make_sequence_reversal_loaders,
+    make_adjacent_order_loaders,
 )
 
 
@@ -214,6 +215,7 @@ def main():
         ("4-bit full parity",                     *make_memorization_loaders(N_TOKENS, BATCH_SIZE)),
         ("first-token detection (x[0])",           *make_first_token_loaders(N_TOKENS, BATCH_SIZE)),
         ("palindrome detection",                   *make_sequence_reversal_loaders(N_TOKENS, BATCH_SIZE)),
+        ("adjacent order (x[0]<x[1])",             *make_adjacent_order_loaders(N_TOKENS, BATCH_SIZE)),
     ]
 
     all_results: dict[str, dict[str, ModelResult]] = {}
@@ -310,6 +312,7 @@ def _plot_task_variety(all_results: dict) -> None:
         "4-bit\nparity",
         "first\ntoken",
         "palindrome",
+        "adjacent\norder",
     ]
     ax.set_xticks(x)
     ax.set_xticklabels(short_names, fontsize=8)

@@ -96,6 +96,27 @@ class SequenceReversalDataset(Dataset):
         return self.X[idx], self.y[idx]
 
 
+class AdjacentOrderDataset(Dataset):
+    """
+    Label = 1 iff x[0]=0 AND x[1]=1 (the first token is strictly less than the second).
+    Strictly positional: swapping x[0] and x[1] flips the label for all 8 inputs where
+    x[0] != x[1]. A set-invariant model cannot solve this because [0,1,*,*] and [1,0,*,*]
+    share the same token multiset yet have opposite labels.
+    16 inputs; 4 positive / 12 negative (75% majority baseline).
+    """
+
+    def __init__(self, n_tokens: int = 4):
+        seqs = list(itertools.product([0, 1], repeat=n_tokens))
+        self.X = torch.tensor(seqs, dtype=torch.long)
+        self.y = ((self.X[:, 0] == 0) & (self.X[:, 1] == 1)).long()
+
+    def __len__(self) -> int:
+        return len(self.X)
+
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
+        return self.X[idx], self.y[idx]
+
+
 # ── DataLoader factories ───────────────────────────────────────────────────────
 
 def make_xor_positions_loaders(
@@ -126,6 +147,16 @@ def make_sequence_reversal_loaders(
     batch_size: int = 8,
 ) -> tuple[DataLoader, DataLoader]:
     ds = SequenceReversalDataset(n_tokens=n_tokens)
+    train_loader = DataLoader(ds, batch_size=batch_size, shuffle=True)
+    test_loader  = DataLoader(ds, batch_size=batch_size, shuffle=False)
+    return train_loader, test_loader
+
+
+def make_adjacent_order_loaders(
+    n_tokens: int = 4,
+    batch_size: int = 8,
+) -> tuple[DataLoader, DataLoader]:
+    ds = AdjacentOrderDataset(n_tokens=n_tokens)
     train_loader = DataLoader(ds, batch_size=batch_size, shuffle=True)
     test_loader  = DataLoader(ds, batch_size=batch_size, shuffle=False)
     return train_loader, test_loader
