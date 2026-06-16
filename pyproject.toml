@@ -1,0 +1,26 @@
+[project]
+name = "qit"
+version = "0.1.0"
+description = "Quantum Interference Transformer — fully quantum sequence architecture"
+requires-python = ">=3.11"
+dependencies = [
+    "pennylane>=0.40",
+    "torch>=2.2",
+    "numpy>=1.26",
+    "matplotlib>=3.8",
+    "scikit-learn>=1.4",
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.29",
+    "anthropic>=0.25",
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+qiskit = ["qiskit>=1.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["qit", "tasks", "baselines", "benchmarks"]

@@ -1,0 +1,43 @@
+\contentsline {section}{\numberline {1}Introduction}{4}{section.1}%
+\contentsline {section}{\numberline {2}Background}{4}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Classical Attention}{4}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Quantum Computing Fundamentals}{5}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Quantum Machine Learning Context}{5}{subsection.2.3}%
+\contentsline {section}{\numberline {3}QIT Architecture}{6}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Overview}{6}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Classical Embedding}{6}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Quantum Interference Attention}{6}{subsection.3.3}%
+\contentsline {subsubsection}{\numberline {3.3.1}Encoding: $U_{\!\text {encode}}$}{7}{subsubsection.3.3.1}%
+\contentsline {subsubsection}{\numberline {3.3.2}Entanglement: $U_{\!\text {entangle}}$}{7}{subsubsection.3.3.2}%
+\contentsline {subsubsection}{\numberline {3.3.3}Attention: $U_{\!\text {attention}}$}{7}{subsubsection.3.3.3}%
+\contentsline {subsubsection}{\numberline {3.3.4}Mixing: $U_{\!\text {mix}}$}{7}{subsubsection.3.3.4}%
+\contentsline {subsubsection}{\numberline {3.3.5}Measurement}{7}{subsubsection.3.3.5}%
+\contentsline {subsection}{\numberline {3.4}Classical Decoder}{8}{subsection.3.4}%
+\contentsline {subsection}{\numberline {3.5}Parameter Breakdown}{8}{subsection.3.5}%
+\contentsline {subsection}{\numberline {3.6}Relationship to Classical Attention: An Analogy, Not an Equivalence}{8}{subsection.3.6}%
+\contentsline {subsection}{\numberline {3.7}Why Interference and Not Dot-Product Attention?}{8}{subsection.3.7}%
+\contentsline {section}{\numberline {4}Experiments}{9}{section.4}%
+\contentsline {subsection}{\numberline {4.1}The Parity Task}{9}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Experimental Setup}{9}{subsection.4.2}%
+\contentsline {section}{\numberline {5}Results}{10}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Convergence Comparison}{10}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Sample Efficiency}{11}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Wall-Clock Overhead}{11}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}Ablation Study}{12}{subsection.5.4}%
+\contentsline {subsection}{\numberline {5.5}Gradient Variance Analysis}{12}{subsection.5.5}%
+\contentsline {subsection}{\numberline {5.6}First-Token Detection (Negative Control)}{13}{subsection.5.6}%
+\contentsline {subsection}{\numberline {5.7}Task Variety: Parity Scaling and Structural Generality}{14}{subsection.5.7}%
+\contentsline {section}{\numberline {6}Discussion}{15}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Why Does QIT Converge So Fast on Parity?}{15}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Limitations of QIT-0}{16}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}What This Work Claims and Does Not Claim}{16}{subsection.6.3}%
+\contentsline {section}{\numberline {7}Future Work}{17}{section.7}%
+\contentsline {subsection}{\numberline {7.1}QIT-1: Larger Circuits \textcolor {gray!70!black}{\textbf {[Planned]}}{}}{17}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}Ablation Studies}{17}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}Tasks Beyond Parity}{17}{subsection.7.3}%
+\contentsline {subsection}{\numberline {7.4}Interference Visualisation \textcolor {gray!70!black}{\textbf {[Planned]}}{}}{17}{subsection.7.4}%
+\contentsline {subsection}{\numberline {7.5}Real Hardware Evaluation \textcolor {gray!70!black}{\textbf {[Planned]}}{}}{17}{subsection.7.5}%
+\contentsline {subsection}{\numberline {7.6}Scaling Laws \textcolor {gray!70!black}{\textbf {[Planned]}}{}}{17}{subsection.7.6}%
+\contentsline {section}{\numberline {8}Conclusion}{18}{section.8}%
+\contentsline {section}{\numberline {A}QIT-0 Configuration Summary}{20}{appendix.A}%
+\contentsline {section}{\numberline {B}Baseline Architecture Summaries}{20}{appendix.B}%

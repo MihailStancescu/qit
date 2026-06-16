@@ -1,0 +1,1 @@
+from .interference import QuantumInterferenceAttention

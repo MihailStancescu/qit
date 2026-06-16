@@ -1,0 +1,477 @@
+{
+  "2-bit partial parity (x[0]\u2295x[1])": {
+    "QIT-0": {
+      "n_params": 78,
+      "mean_conv_epoch": 4.6,
+      "std_conv_epoch": 1.019803902718557,
+      "mean_grad_steps": 9.2,
+      "conv_seeds": 5,
+      "best_acc": 1.0,
+      "mean_ms_per_ep": 190.1877470507558,
+      "seeds": [
+        {
+          "converged_at": 5,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 4,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 3,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 5,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 6,
+          "best_test_acc": 1.0
+        }
+      ]
+    },
+    "MLP": {
+      "n_params": 94,
+      "mean_conv_epoch": 8.6,
+      "std_conv_epoch": 7.939773296511683,
+      "mean_grad_steps": 17.2,
+      "conv_seeds": 5,
+      "best_acc": 1.0,
+      "mean_ms_per_ep": 0.6686127792862762,
+      "seeds": [
+        {
+          "converged_at": 8,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 4,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 5,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 24,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 2,
+          "best_test_acc": 1.0
+        }
+      ]
+    },
+    "Transformer": {
+      "n_params": 206,
+      "mean_conv_epoch": 28.0,
+      "std_conv_epoch": 9.121403400793104,
+      "mean_grad_steps": 56.0,
+      "conv_seeds": 5,
+      "best_acc": 1.0,
+      "mean_ms_per_ep": 2.1450896686829397,
+      "seeds": [
+        {
+          "converged_at": 36,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 16,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 20,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 28,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 40,
+          "best_test_acc": 1.0
+        }
+      ]
+    }
+  },
+  "3-bit partial parity (x[0]\u2295x[1]\u2295x[2])": {
+    "QIT-0": {
+      "n_params": 78,
+      "mean_conv_epoch": 5.0,
+      "std_conv_epoch": 2.1908902300206643,
+      "mean_grad_steps": 10.0,
+      "conv_seeds": 5,
+      "best_acc": 1.0,
+      "mean_ms_per_ep": 181.02934909055918,
+      "seeds": [
+        {
+          "converged_at": 3,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 2,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 6,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 8,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 6,
+          "best_test_acc": 1.0
+        }
+      ]
+    },
+    "MLP": {
+      "n_params": 94,
+      "mean_conv_epoch": 23.75,
+      "std_conv_epoch": 9.03811374126261,
+      "mean_grad_steps": 47.5,
+      "conv_seeds": 4,
+      "best_acc": 0.975,
+      "mean_ms_per_ep": 0.6093859993696544,
+      "seeds": [
+        {
+          "converged_at": 23,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 13,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 38,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": null,
+          "best_test_acc": 0.875
+        },
+        {
+          "converged_at": 21,
+          "best_test_acc": 1.0
+        }
+      ]
+    },
+    "Transformer": {
+      "n_params": 206,
+      "mean_conv_epoch": 25.333333333333332,
+      "std_conv_epoch": 7.3181661333667165,
+      "mean_grad_steps": 50.666666666666664,
+      "conv_seeds": 3,
+      "best_acc": 0.9625,
+      "mean_ms_per_ep": 2.169248012521793,
+      "seeds": [
+        {
+          "converged_at": 31,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 15,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 30,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": null,
+          "best_test_acc": 0.875
+        },
+        {
+          "converged_at": null,
+          "best_test_acc": 0.9375
+        }
+      ]
+    }
+  },
+  "4-bit full parity": {
+    "QIT-0": {
+      "n_params": 78,
+      "mean_conv_epoch": 6.2,
+      "std_conv_epoch": 1.7204650534085253,
+      "mean_grad_steps": 12.4,
+      "conv_seeds": 5,
+      "best_acc": 1.0,
+      "mean_ms_per_ep": 182.19369589284594,
+      "seeds": [
+        {
+          "converged_at": 7,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 6,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 4,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 9,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 5,
+          "best_test_acc": 1.0
+        }
+      ]
+    },
+    "MLP": {
+      "n_params": 94,
+      "mean_conv_epoch": 31.666666666666668,
+      "std_conv_epoch": 4.109609335312651,
+      "mean_grad_steps": 63.333333333333336,
+      "conv_seeds": 3,
+      "best_acc": 0.8875,
+      "mean_ms_per_ep": 0.5818762567985248,
+      "seeds": [
+        {
+          "converged_at": null,
+          "best_test_acc": 0.875
+        },
+        {
+          "converged_at": 37,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 27,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": null,
+          "best_test_acc": 0.5625
+        },
+        {
+          "converged_at": 31,
+          "best_test_acc": 1.0
+        }
+      ]
+    },
+    "Transformer": {
+      "n_params": 206,
+      "mean_conv_epoch": NaN,
+      "std_conv_epoch": 0.0,
+      "mean_grad_steps": NaN,
+      "conv_seeds": 0,
+      "best_acc": 0.775,
+      "mean_ms_per_ep": 2.1789261839876417,
+      "seeds": [
+        {
+          "converged_at": null,
+          "best_test_acc": 0.75
+        },
+        {
+          "converged_at": null,
+          "best_test_acc": 0.9375
+        },
+        {
+          "converged_at": null,
+          "best_test_acc": 0.6875
+        },
+        {
+          "converged_at": null,
+          "best_test_acc": 0.875
+        },
+        {
+          "converged_at": null,
+          "best_test_acc": 0.625
+        }
+      ]
+    }
+  },
+  "first-token detection (x[0])": {
+    "QIT-0": {
+      "n_params": 78,
+      "mean_conv_epoch": 4.0,
+      "std_conv_epoch": 1.0954451150103321,
+      "mean_grad_steps": 8.0,
+      "conv_seeds": 5,
+      "best_acc": 1.0,
+      "mean_ms_per_ep": 183.69734483538195,
+      "seeds": [
+        {
+          "converged_at": 2,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 5,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 4,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 4,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 5,
+          "best_test_acc": 1.0
+        }
+      ]
+    },
+    "MLP": {
+      "n_params": 94,
+      "mean_conv_epoch": 3.4,
+      "std_conv_epoch": 3.3226495451672298,
+      "mean_grad_steps": 6.8,
+      "conv_seeds": 5,
+      "best_acc": 1.0,
+      "mean_ms_per_ep": 0.681492878268755,
+      "seeds": [
+        {
+          "converged_at": 2,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 2,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 2,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 10,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 1,
+          "best_test_acc": 1.0
+        }
+      ]
+    },
+    "Transformer": {
+      "n_params": 206,
+      "mean_conv_epoch": 5.8,
+      "std_conv_epoch": 1.7204650534085253,
+      "mean_grad_steps": 11.6,
+      "conv_seeds": 5,
+      "best_acc": 1.0,
+      "mean_ms_per_ep": 2.1558903879994187,
+      "seeds": [
+        {
+          "converged_at": 6,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 5,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 8,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 3,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 7,
+          "best_test_acc": 1.0
+        }
+      ]
+    }
+  },
+  "palindrome detection": {
+    "QIT-0": {
+      "n_params": 78,
+      "mean_conv_epoch": 13.2,
+      "std_conv_epoch": 3.249615361854384,
+      "mean_grad_steps": 26.4,
+      "conv_seeds": 5,
+      "best_acc": 1.0,
+      "mean_ms_per_ep": 184.5200011574319,
+      "seeds": [
+        {
+          "converged_at": 9,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 12,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 13,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 19,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 13,
+          "best_test_acc": 1.0
+        }
+      ]
+    },
+    "MLP": {
+      "n_params": 94,
+      "mean_conv_epoch": 53.4,
+      "std_conv_epoch": 54.47054249775744,
+      "mean_grad_steps": 106.8,
+      "conv_seeds": 5,
+      "best_acc": 1.0,
+      "mean_ms_per_ep": 0.5525545891843177,
+      "seeds": [
+        {
+          "converged_at": 118,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 10,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 13,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 122,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": 4,
+          "best_test_acc": 1.0
+        }
+      ]
+    },
+    "Transformer": {
+      "n_params": 206,
+      "mean_conv_epoch": 55.0,
+      "std_conv_epoch": 0.0,
+      "mean_grad_steps": 110.0,
+      "conv_seeds": 1,
+      "best_acc": 0.9125,
+      "mean_ms_per_ep": 2.1829769228447655,
+      "seeds": [
+        {
+          "converged_at": 55,
+          "best_test_acc": 1.0
+        },
+        {
+          "converged_at": null,
+          "best_test_acc": 0.9375
+        },
+        {
+          "converged_at": null,
+          "best_test_acc": 0.75
+        },
+        {
+          "converged_at": null,
+          "best_test_acc": 0.9375
+        },
+        {
+          "converged_at": null,
+          "best_test_acc": 0.9375
+        }
+      ]
+    }
+  }
+}

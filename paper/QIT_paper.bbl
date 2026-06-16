@@ -1,0 +1,135 @@
+\begin{thebibliography}{18}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Abbas et~al.(2021)Abbas, Sutter, Zoufal, Lucchi, Figalli, and
+  Woerner]{abbas2021power}
+Amira Abbas, David Sutter, Christa Zoufal, Aurelien Lucchi, Alessio Figalli,
+  and Stefan Woerner.
+\newblock The power of quantum neural networks.
+\newblock \emph{Nature Computational Science}, 1\penalty0 (6):\penalty0
+  403--409, 2021.
+
+\bibitem[Benedetti et~al.(2019)Benedetti, Lloyd, Sack, and
+  Fiorentini]{benedetti2019parameterized}
+Marcello Benedetti, Erika Lloyd, Stefan Sack, and Mattia Fiorentini.
+\newblock Parameterized quantum circuits as machine learning models.
+\newblock \emph{Quantum Science and Technology}, 4\penalty0 (4):\penalty0
+  043001, 2019.
+
+\bibitem[Bergholm et~al.(2018)Bergholm, Izaac, Schuld, Gogolin, Ahmed, Ajith,
+  Alam, Alonso-Linaje, AkashNarayanan, Asadi, et~al.]{bergholm2018pennylane}
+Ville Bergholm, Josh Izaac, Maria Schuld, Christian Gogolin, Shahnawaz Ahmed,
+  Vishnu Ajith, M~Sohaib Alam, Guillermo Alonso-Linaje, B~AkashNarayanan, Ali
+  Asadi, et~al.
+\newblock {PennyLane}: Automatic differentiation of hybrid quantum-classical
+  computations.
+\newblock \emph{arXiv preprint arXiv:1811.04968}, 2018.
+
+\bibitem[Bernstein and Vazirani(1997)]{bernstein1997quantum}
+Ethan Bernstein and Umesh Vazirani.
+\newblock Quantum complexity theory.
+\newblock \emph{SIAM Journal on Computing}, 26\penalty0 (5):\penalty0
+  1411--1473, 1997.
+
+\bibitem[Biamonte et~al.(2017)Biamonte, Wittek, Pancotti, Rebentrost, Wiebe,
+  and Lloyd]{biamonte2017quantum}
+Jacob Biamonte, Peter Wittek, Nicola Pancotti, Patrick Rebentrost, Nathan
+  Wiebe, and Seth Lloyd.
+\newblock Quantum machine learning.
+\newblock \emph{Nature}, 549\penalty0 (7671):\penalty0 195--202, 2017.
+
+\bibitem[Bowles et~al.(2024)Bowles, Ahmed, and Schuld]{bowles2024benchmarking}
+Joseph Bowles, Shahnawaz Ahmed, and Maria Schuld.
+\newblock Better than classical? the subtle art of benchmarking quantum machine
+  learning models.
+\newblock \emph{arXiv preprint arXiv:2403.07059}, 2024.
+
+\bibitem[Cerezo et~al.(2021)Cerezo, Arrasmith, Babbush, Benjamin, Endo, Fujii,
+  McClean, Mitarai, Yuan, Cincio, and Coles]{cerezo2021variational}
+Marco Cerezo, Andrew Arrasmith, Ryan Babbush, Simon~C Benjamin, Suguru Endo,
+  Keisuke Fujii, Jarrod~R McClean, Kosuke Mitarai, Xiao Yuan, Lukasz Cincio,
+  and Patrick~J Coles.
+\newblock Variational quantum algorithms.
+\newblock \emph{Nature Reviews Physics}, 3\penalty0 (9):\penalty0 625--644,
+  2021.
+
+\bibitem[Cerezo et~al.(2023)Cerezo, Larocca, Garc{\'\i}a-Mart{\'\i}n, Diaz,
+  Braccia, Fontana, Rudolph, Bermejo-Vega, Ragone, and Coles]{cerezo2023does}
+Marco Cerezo, Martin Larocca, Diego Garc{\'\i}a-Mart{\'\i}n, N~L Diaz, Paolo
+  Braccia, Enrico Fontana, Manuel~S Rudolph, Juan Bermejo-Vega, Michael Ragone,
+  and Patrick~J Coles.
+\newblock Does provable absence of barren plateaus imply classical
+  simulability?
+\newblock \emph{arXiv preprint arXiv:2209.09442}, 2023.
+
+\bibitem[Deutsch and Jozsa(1992)]{deutsch1992rapid}
+David Deutsch and Richard Jozsa.
+\newblock Rapid solution of problems by quantum computation.
+\newblock \emph{Proceedings of the Royal Society of London. Series A:
+  Mathematical and Physical Sciences}, 439\penalty0 (1907):\penalty0 553--558,
+  1992.
+
+\bibitem[Farhi and Neven(2018)]{farhi2018classification}
+Edward Farhi and Hartmut Neven.
+\newblock Classification with quantum neural networks on near term processors.
+\newblock \emph{arXiv preprint arXiv:1802.06002}, 2018.
+
+\bibitem[Havl{\'\i}{\v{c}}ek et~al.(2019)Havl{\'\i}{\v{c}}ek, C{\'o}rcoles,
+  Temme, Harrow, Kandala, Chow, and Gambetta]{havlicek2019supervised}
+Vojt{\v{e}}ch Havl{\'\i}{\v{c}}ek, Antonio~D C{\'o}rcoles, Kristan Temme,
+  Aram~W Harrow, Abhinav Kandala, Jerry~M Chow, and Jay~M Gambetta.
+\newblock Supervised learning with quantum-enhanced feature spaces.
+\newblock \emph{Nature}, 567\penalty0 (7747):\penalty0 209--212, 2019.
+
+\bibitem[Lorenz et~al.(2023)Lorenz, Pearson, Meichanetzidis, Kartsaklis, and
+  Coecke]{lorenz2023qnlp}
+Robin Lorenz, Anna Pearson, Konstantinos Meichanetzidis, Dimitri Kartsaklis,
+  and Bob Coecke.
+\newblock {QNLP} in practice: Running compositional models of meaning on a
+  quantum computer.
+\newblock \emph{Journal of Artificial Intelligence Research}, 76:\penalty0
+  1305--1342, 2023.
+
+\bibitem[McClean et~al.(2018)McClean, Boixo, Smelyanskiy, Babbush, and
+  Neven]{mcclean2018barren}
+Jarrod~R McClean, Sergio Boixo, Vadim~N Smelyanskiy, Ryan Babbush, and Hartmut
+  Neven.
+\newblock Barren plateaus in quantum neural network training landscapes.
+\newblock \emph{Nature Communications}, 9:\penalty0 4812, 2018.
+
+\bibitem[Mitarai et~al.(2018)Mitarai, Negoro, Kitagawa, and
+  Fujii]{mitarai2018quantum}
+Kosuke Mitarai, Makoto Negoro, Masahiro Kitagawa, and Keisuke Fujii.
+\newblock Quantum circuit learning.
+\newblock \emph{Physical Review A}, 98\penalty0 (3):\penalty0 032309, 2018.
+
+\bibitem[Preskill(2018)]{preskill2018quantum}
+John Preskill.
+\newblock Quantum computing in the {NISQ} era and beyond.
+\newblock \emph{Quantum}, 2:\penalty0 79, 2018.
+
+\bibitem[Schuld(2021)]{schuld2021kernel}
+Maria Schuld.
+\newblock Supervised quantum machine learning models are kernel methods.
+\newblock \emph{arXiv preprint arXiv:2101.11020}, 2021.
+
+\bibitem[Schuld et~al.(2019)Schuld, Bergholm, Gogolin, Izaac, and
+  Killoran]{schuld2019evaluating}
+Maria Schuld, Ville Bergholm, Christian Gogolin, Josh Izaac, and Nathan
+  Killoran.
+\newblock Evaluating analytic gradients on quantum hardware.
+\newblock \emph{Physical Review A}, 99\penalty0 (3):\penalty0 032331, 2019.
+
+\bibitem[Vaswani et~al.(2017)Vaswani, Shazeer, Parmar, Uszkoreit, Jones, Gomez,
+  Kaiser, and Polosukhin]{vaswani2017attention}
+Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones,
+  Aidan~N Gomez, {\L}ukasz Kaiser, and Illia Polosukhin.
+\newblock Attention is all you need.
+\newblock In \emph{Advances in Neural Information Processing Systems},
+  volume~30, 2017.
+
+\end{thebibliography}

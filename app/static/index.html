@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QIT — Quantum Interference Transformer</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────────── -->
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <span class="logo-icon">⚛</span>
+      <span class="logo-name">QIT</span>
+      <span class="logo-sub">Quantum Interference Transformer</span>
+    </div>
+    <div id="status-badge" class="status-badge status-idle">No model loaded</div>
+  </div>
+</header>
+
+<!-- ── Tabs ────────────────────────────────────────────────────────────────── -->
+<div class="tabs-bar">
+  <button class="tab-btn active" data-tab="studio">⚡ QIT Studio</button>
+  <button class="tab-btn" data-tab="chat">📖 Tolkien Chat</button>
+</div>
+
+<!-- ── Main ────────────────────────────────────────────────────────────────── -->
+<main class="main">
+
+  <!-- ══════════ TAB 1: QIT STUDIO ═════════════════════════════════════════ -->
+  <div id="tab-studio" class="tab-content active">
+    <div class="studio-grid">
+
+      <!-- LEFT: Corpus + Config -->
+      <div class="studio-left">
+
+        <!-- Corpus card -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Corpus</h2>
+            <label class="btn btn-sm btn-ghost" for="file-upload">
+              Upload .txt
+              <input id="file-upload" type="file" accept=".txt" hidden />
+            </label>
+          </div>
+          <textarea
+            id="corpus-input"
+            class="corpus-textarea"
+            placeholder="Paste text here, or upload a .txt file (e.g., Tolkien excerpt)…"
+            spellcheck="false"
+          ></textarea>
+          <div class="corpus-footer">
+            <span id="corpus-char-count" class="muted">0 characters</span>
+            <button id="set-corpus-btn" class="btn btn-primary btn-sm">Set Corpus</button>
+          </div>
+        </div>
+
+        <!-- Config card -->
+        <div class="card">
+          <div class="card-header"><h2>Model Config</h2></div>
+          <div class="config-grid">
+            <label>Context window (chars)
+              <input type="number" id="cfg-ctx" value="6" min="4" max="12" />
+            </label>
+            <label>Quantum layers
+              <input type="number" id="cfg-layers" value="2" min="1" max="4" />
+            </label>
+            <label>Epochs
+              <input type="number" id="cfg-epochs" value="60" min="5" max="300" />
+            </label>
+            <label>Learning rate
+              <input type="number" id="cfg-lr" value="0.05" min="0.001" max="0.5" step="0.005" />
+            </label>
+            <label>Batch size
+              <input type="number" id="cfg-batch" value="8" min="2" max="32" />
+            </label>
+            <label>Generate every N epochs
+              <input type="number" id="cfg-gen-every" value="10" min="1" max="50" />
+            </label>
+          </div>
+          <div class="config-footer">
+            <span id="qubits-label" class="muted">Total qubits: 12</span>
+            <button id="train-btn" class="btn btn-primary">▶ Train</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Progress + Generate -->
+      <div class="studio-right">
+
+        <!-- Training progress card -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Training</h2>
+            <span id="epoch-label" class="muted">–</span>
+          </div>
+          <div id="training-idle" class="training-idle">
+            <span>Configure your model and press ▶ Train to begin.</span>
+          </div>
+          <div id="training-active" class="training-active hidden">
+            <div class="metrics-row">
+              <div class="metric">
+                <span class="metric-label">Train loss</span>
+                <span id="m-train-loss" class="metric-val">–</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Val loss</span>
+                <span id="m-val-loss" class="metric-val">–</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Perplexity</span>
+                <span id="m-ppl" class="metric-val">–</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">BPC</span>
+                <span id="m-bpc" class="metric-val">–</span>
+              </div>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="loss-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sample output card -->
+        <div class="card" id="sample-card" style="display:none">
+          <div class="card-header"><h2>Generated Sample</h2><span class="pill pill-purple">quantum</span></div>
+          <div id="sample-output" class="sample-output"></div>
+        </div>
+
+        <!-- Generate card -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Generate Text</h2>
+            <span id="model-info" class="muted small">No model loaded</span>
+          </div>
+          <div class="generate-row">
+            <input
+              id="gen-prompt"
+              type="text"
+              class="gen-input"
+              placeholder="Enter a prompt…"
+              value="the "
+            />
+            <button id="gen-btn" class="btn btn-primary" disabled>Generate</button>
+          </div>
+          <div class="generate-options">
+            <label>Tokens <input id="gen-tokens" type="number" value="100" min="10" max="500" /></label>
+            <label>Temp <input id="gen-temp" type="number" value="0.8" step="0.1" min="0.1" max="2.0" /></label>
+            <label>Top-k <input id="gen-topk" type="number" value="5" min="1" max="27" /></label>
+          </div>
+          <div id="gen-output" class="gen-output muted">Output will appear here after training…</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ TAB 2: TOLKIEN CHAT ═══════════════════════════════════════ -->
+  <div id="tab-chat" class="tab-content hidden">
+    <div class="chat-layout">
+
+      <!-- Sidebar -->
+      <div class="chat-sidebar">
+        <div class="card">
+          <div class="card-header"><h2>API Key</h2></div>
+          <input
+            id="api-key-input"
+            type="password"
+            class="api-key-input"
+            placeholder="sk-ant-…"
+          />
+          <p class="muted small" style="margin-top:6px">
+            Claude API key for Q&A. <br/>
+            Also reads <code>ANTHROPIC_API_KEY</code> env var.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h2>Model</h2></div>
+          <select id="claude-model" class="select">
+            <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
+            <option value="claude-opus-4-7">Claude Opus 4.7</option>
+            <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5</option>
+          </select>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h2>Retrieval</h2></div>
+          <div class="retrieval-info muted small">
+            <p><strong>Step 1:</strong> TF-IDF ranks the top 6 passages from your corpus.</p>
+            <p><strong>Step 2:</strong> QIT-LM perplexity re-ranks them — lower perplexity means more in-distribution with the training text.</p>
+            <p><strong>Step 3:</strong> Claude answers using the top 3 passages as context.</p>
+            <p id="qit-status-note" class="pill pill-yellow" style="display:inline-block;margin-top:6px">
+              No QIT model — using TF-IDF only
+            </p>
+          </div>
+        </div>
+
+        <button id="clear-chat-btn" class="btn btn-ghost btn-sm" style="width:100%">Clear chat</button>
+      </div>
+
+      <!-- Chat main -->
+      <div class="chat-main">
+        <div id="chat-history" class="chat-history">
+          <div class="chat-welcome">
+            <div class="welcome-icon">📖</div>
+            <h3>Ask anything about Tolkien</h3>
+            <p class="muted">Upload your corpus in QIT Studio, then ask questions here. Claude answers using passages retrieved from your text, optionally re-ranked by the quantum model.</p>
+          </div>
+        </div>
+
+        <div class="chat-input-bar">
+          <textarea
+            id="chat-input"
+            class="chat-textarea"
+            placeholder="Who is Gandalf? What is the One Ring? Where is Rivendell?…"
+            rows="1"
+          ></textarea>
+          <button id="chat-send-btn" class="btn btn-primary btn-send">↑</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
