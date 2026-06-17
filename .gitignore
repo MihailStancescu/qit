@@ -9,3 +9,5 @@ wheels/
 # Virtual environments
 .venv
 training_data/
+train_data/TinyStoriesV2-GPT4-train.txt
+train_data/TinyStoriesV2-GPT4-valid.txt
