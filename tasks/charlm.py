@@ -100,28 +100,41 @@ def make_charlm_loaders(
     batch_size: int = 8,
     train_frac: float = 0.9,
     seed: int = 42,
+    valid_text: str | None = None,
 ) -> tuple[DataLoader, DataLoader, CharVocab]:
     """
-    Build train/val DataLoaders from text.
-    Split is positional (first 90% train, last 10% val) — not random —
-    so val sees text the model hasn't trained on.
+    Build train/val DataLoaders.
+
+    If valid_text is provided it is used as the validation set and the
+    train corpus is used in full (train_frac is ignored). The vocab is
+    built from the train text; characters in valid_text not seen during
+    training are silently filtered by CharVocab.encode().
+
+    Otherwise a positional split (first train_frac of windows) is used.
 
     Returns:
         (train_loader, val_loader, vocab)
     """
-    corpus = text if text is not None else DEMO_CORPUS
-    ds = CharLMDataset.from_string(corpus, ctx_len)
-    vocab = ds.vocab
-
-    n_train = int(len(ds) * train_frac)
-    n_val = len(ds) - n_train
-
-    # Positional split: first n_train windows for train, rest for val.
     from torch.utils.data import Subset
-    train_ds = Subset(ds, range(n_train))
-    val_ds = Subset(ds, range(n_train, n_train + n_val))
 
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
+    corpus = text if text is not None else DEMO_CORPUS
+    train_ds = CharLMDataset.from_string(corpus, ctx_len)
+    vocab = train_ds.vocab
+
+    if valid_text is not None:
+        valid_ids = vocab.encode(valid_text)
+        if len(valid_ids) <= ctx_len:
+            raise ValueError(
+                f"Validation text too short for ctx_len={ctx_len}: "
+                f"need >{ctx_len} encoded chars, got {len(valid_ids)}"
+            )
+        val_ds = CharLMDataset(valid_ids, ctx_len, vocab)
+        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
+        val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False)
+    else:
+        n_train = int(len(train_ds) * train_frac)
+        n_val   = len(train_ds) - n_train
+        train_loader = DataLoader(Subset(train_ds, range(n_train)),           batch_size=batch_size, shuffle=True)
+        val_loader   = DataLoader(Subset(train_ds, range(n_train, n_train + n_val)), batch_size=batch_size, shuffle=False)
 
     return train_loader, val_loader, vocab

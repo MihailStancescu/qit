@@ -43,7 +43,8 @@ class Config:
     batch_size: int = 8
 
     # Data
-    corpus: str | None = None     # path to .txt file; None = built-in demo corpus
+    corpus: str | None = None       # path to .txt file; None = built-in demo corpus
+    valid_corpus: str | None = None # path to separate .valid.txt; overrides train_frac split
     train_frac: float = 0.9
     seed: int = 42
 
@@ -94,12 +95,17 @@ def train(
     if cfg.corpus is not None:
         corpus_text = open(cfg.corpus).read()
 
+    valid_text: str | None = None
+    if cfg.valid_corpus is not None:
+        valid_text = open(cfg.valid_corpus).read()
+
     train_loader, val_loader, vocab = make_charlm_loaders(
         text=corpus_text,
         ctx_len=cfg.ctx_len,
         batch_size=cfg.batch_size,
         train_frac=cfg.train_frac,
         seed=cfg.seed,
+        valid_text=valid_text,
     )
 
     # ── Model ─────────────────────────────────────────────────────────────────
@@ -276,6 +282,7 @@ def main(cfg: Config) -> None:
 def _parse_args() -> Config:
     p = argparse.ArgumentParser(description="Train QIT-LM on character-level text")
     p.add_argument("--corpus",       default=None,  help="Path to .txt corpus file (default: built-in demo)")
+    p.add_argument("--valid",        default=None,  help="Path to .valid.txt for validation (overrides train_frac split)", dest="valid_corpus")
     p.add_argument("--ctx_len",      type=int,   default=6,    help="Context window / n_tokens")
     p.add_argument("--n_qubits_per_token", type=int, default=2)
     p.add_argument("--n_layers",     type=int,   default=2)

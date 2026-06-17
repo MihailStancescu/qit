@@ -78,7 +78,21 @@ async def upload_corpus(file: UploadFile = File(...)):
     if len(text) < 50:
         raise HTTPException(400, "File too short (need at least 50 characters).")
     STATE.active_corpus = text
-    return {"ok": True, "filename": file.filename, "chars": len(text)}
+    return {"ok": True, "filename": file.filename, "chars": len(text), "bytes": len(content)}
+
+
+@app.post("/api/corpus/upload-valid")
+async def upload_valid_corpus(file: UploadFile = File(...)):
+    """Accept a .valid.txt file as the validation corpus."""
+    content = await file.read()
+    try:
+        text = content.decode("utf-8", errors="replace").strip()
+    except Exception as e:
+        raise HTTPException(400, f"Could not decode file: {e}")
+    if len(text) < 10:
+        raise HTTPException(400, "Validation file too short.")
+    STATE.valid_corpus = text
+    return {"ok": True, "filename": file.filename, "chars": len(text), "bytes": len(content)}
 
 
 # ── Training endpoints ────────────────────────────────────────────────────────
@@ -125,8 +139,15 @@ async def start_train(req: TrainRequest):
         batch_size=req.batch_size,
         gen_every=req.gen_every,
         seed=req.seed,
+        valid_corpus_text=STATE.valid_corpus,
     )
-    return {"job_id": job_id, "warning": warning, "train_chars": len(train_corpus)}
+    return {
+        "job_id": job_id,
+        "warning": warning,
+        "train_chars": len(train_corpus),
+        "has_valid": STATE.valid_corpus is not None,
+        "valid_chars": len(STATE.valid_corpus) if STATE.valid_corpus else 0,
+    }
 
 
 @app.get("/api/train/{job_id}/stream")
@@ -260,6 +281,8 @@ async def app_status():
     return {
         "has_corpus":   corpus is not None,
         "corpus_chars": len(corpus) if corpus else 0,
+        "has_valid":    STATE.valid_corpus is not None,
+        "valid_chars":  len(STATE.valid_corpus) if STATE.valid_corpus else 0,
         "has_model":    model is not None,
         "vocab_size":   vocab.size if vocab else None,
         "n_parameters": model.n_parameters if model else None,

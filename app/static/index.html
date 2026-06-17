@@ -41,21 +41,40 @@
         <div class="card">
           <div class="card-header">
             <h2>Corpus</h2>
-            <label class="btn btn-sm btn-ghost" for="file-upload">
-              Upload .txt
-              <input id="file-upload" type="file" accept=".txt" hidden />
-            </label>
           </div>
-          <textarea
-            id="corpus-input"
-            class="corpus-textarea"
-            placeholder="Paste text here, or upload a .txt file (e.g., Tolkien excerpt)…"
-            spellcheck="false"
-          ></textarea>
-          <div class="corpus-footer">
-            <span id="corpus-char-count" class="muted">0 characters</span>
-            <button id="set-corpus-btn" class="btn btn-primary btn-sm">Set Corpus</button>
+
+          <!-- File uploads (fast path — no textarea fill) -->
+          <div class="corpus-uploads">
+            <div class="corpus-upload-row">
+              <label class="btn btn-sm btn-ghost corpus-upload-label" for="file-upload">
+                Upload train .txt
+                <input id="file-upload" type="file" accept=".txt" hidden />
+              </label>
+              <span id="corpus-file-info" class="muted small">No file loaded</span>
+            </div>
+            <div class="corpus-upload-row">
+              <label class="btn btn-sm btn-ghost corpus-upload-label" for="valid-upload">
+                Upload .valid.txt
+                <input id="valid-upload" type="file" accept=".txt" hidden />
+              </label>
+              <span id="valid-file-info" class="muted small">No validation file</span>
+            </div>
           </div>
+
+          <!-- Paste path (small files / quick experiments) -->
+          <details class="corpus-paste-details">
+            <summary class="muted small">Or paste text manually…</summary>
+            <textarea
+              id="corpus-input"
+              class="corpus-textarea"
+              placeholder="Paste text here…"
+              spellcheck="false"
+            ></textarea>
+            <div class="corpus-footer">
+              <span id="corpus-char-count" class="muted">0 characters</span>
+              <button id="set-corpus-btn" class="btn btn-primary btn-sm">Set Corpus</button>
+            </div>
+          </details>
         </div>
 
         <!-- Config card -->

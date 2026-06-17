@@ -42,6 +42,7 @@ class AppState:
         self.active_model: QITLM | None = None
         self.active_vocab: CharVocab | None = None
         self.active_corpus: str | None = None
+        self.valid_corpus: str | None = None
         self._lock = threading.Lock()
 
     def set_active(self, model: QITLM, vocab: CharVocab, corpus: str) -> None:
@@ -68,6 +69,7 @@ def start_training(
     batch_size: int = 8,
     gen_every: int = 10,
     seed: int = 42,
+    valid_corpus_text: str | None = None,
 ) -> str:
     """
     Kick off a training job in a background thread.
@@ -100,7 +102,7 @@ def start_training(
             })
 
         try:
-            for metrics, model, vocab in _train_on_text(cfg, corpus_text, step_cb):
+            for metrics, model, vocab in _train_on_text(cfg, corpus_text, step_cb, valid_corpus_text):
                 job.model = model
                 job.vocab = vocab
                 job.queue.put({"type": "progress", **_metrics_to_dict(metrics)})
@@ -119,17 +121,26 @@ def start_training(
     return job_id
 
 
-def _train_on_text(cfg: Config, corpus_text: str, step_cb=None):
-    """Write corpus to a temp file and run the training generator."""
+def _train_on_text(cfg: Config, corpus_text: str, step_cb=None, valid_text: str | None = None):
+    """Write corpus (and optional valid) to temp files and run the training generator."""
     import tempfile, os
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8") as f:
-        f.write(corpus_text)
-        tmp_path = f.name
+    tmp_paths = []
     try:
-        cfg.corpus = tmp_path
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8") as f:
+            f.write(corpus_text)
+            cfg.corpus = f.name
+            tmp_paths.append(f.name)
+
+        if valid_text is not None:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".valid.txt", delete=False, encoding="utf-8") as f:
+                f.write(valid_text)
+                cfg.valid_corpus = f.name
+                tmp_paths.append(f.name)
+
         yield from train(cfg, step_callback=step_cb)
     finally:
-        os.unlink(tmp_path)
+        for p in tmp_paths:
+            os.unlink(p)
 
 
 def _metrics_to_dict(metrics) -> dict[str, Any]:

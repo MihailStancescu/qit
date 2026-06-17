@@ -48,22 +48,65 @@ setInterval(refreshStatus, 4000);
 refreshStatus();
 
 // ── Corpus ────────────────────────────────────────────────────────────────────
-const corpusInput   = document.getElementById('corpus-input');
-const corpusCount   = document.getElementById('corpus-char-count');
-const setCorpusBtn  = document.getElementById('set-corpus-btn');
-const fileUpload    = document.getElementById('file-upload');
+const corpusInput    = document.getElementById('corpus-input');
+const corpusCount    = document.getElementById('corpus-char-count');
+const setCorpusBtn   = document.getElementById('set-corpus-btn');
+const fileUpload     = document.getElementById('file-upload');
+const validUpload    = document.getElementById('valid-upload');
+const corpusFileInfo = document.getElementById('corpus-file-info');
+const validFileInfo  = document.getElementById('valid-file-info');
 
-corpusInput.addEventListener('input', () => {
-  corpusCount.textContent = `${corpusInput.value.length.toLocaleString()} characters`;
-});
+function fmtBytes(b) {
+  if (b < 1024) return `${b} B`;
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+  return `${(b / 1024 / 1024).toFixed(2)} MB`;
+}
 
+// Train file: upload immediately, show filename + size, no textarea fill
 fileUpload.addEventListener('change', async e => {
   const file = e.target.files[0];
   if (!file) return;
-  const text = await file.text();
-  corpusInput.value = text;
-  corpusCount.textContent = `${text.length.toLocaleString()} characters`;
+  corpusFileInfo.textContent = 'Uploading…';
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const r = await fetch('/api/corpus/upload', { method: 'POST', body: form });
+    if (!r.ok) { const err = await r.json(); throw new Error(err.detail); }
+    const d = await r.json();
+    corpusFileInfo.textContent = `${d.filename} — ${d.chars.toLocaleString()} chars (${fmtBytes(d.bytes)})`;
+    corpusFileInfo.style.color = 'var(--green)';
+    refreshStatus();
+  } catch (err) {
+    corpusFileInfo.textContent = `Error: ${err.message}`;
+    corpusFileInfo.style.color = 'var(--red, #f85149)';
+  }
   fileUpload.value = '';
+});
+
+// Validation file: upload immediately, show filename + size
+validUpload.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  validFileInfo.textContent = 'Uploading…';
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const r = await fetch('/api/corpus/upload-valid', { method: 'POST', body: form });
+    if (!r.ok) { const err = await r.json(); throw new Error(err.detail); }
+    const d = await r.json();
+    validFileInfo.textContent = `${d.filename} — ${d.chars.toLocaleString()} chars (${fmtBytes(d.bytes)})`;
+    validFileInfo.style.color = 'var(--green)';
+    refreshStatus();
+  } catch (err) {
+    validFileInfo.textContent = `Error: ${err.message}`;
+    validFileInfo.style.color = 'var(--red, #f85149)';
+  }
+  validUpload.value = '';
+});
+
+// Paste path (textarea → /api/corpus/text)
+corpusInput.addEventListener('input', () => {
+  corpusCount.textContent = `${corpusInput.value.length.toLocaleString()} characters`;
 });
 
 setCorpusBtn.addEventListener('click', async () => {
@@ -78,6 +121,8 @@ setCorpusBtn.addEventListener('click', async () => {
       body: JSON.stringify({ text }),
     });
     if (!r.ok) { const e = await r.json(); throw new Error(e.detail); }
+    corpusFileInfo.textContent = `Pasted text — ${text.length.toLocaleString()} chars`;
+    corpusFileInfo.style.color = 'var(--green)';
     setCorpusBtn.textContent = '✓ Set';
     setTimeout(() => { setCorpusBtn.textContent = 'Set Corpus'; setCorpusBtn.disabled = false; }, 1500);
     refreshStatus();

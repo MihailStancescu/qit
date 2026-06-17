@@ -152,6 +152,14 @@ body {
 }
 
 /* Corpus */
+.corpus-uploads { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.corpus-upload-row { display: flex; align-items: center; gap: 10px; }
+.corpus-upload-label { white-space: nowrap; cursor: pointer; }
+.corpus-paste-details { border-top: 1px solid var(--border2); padding-top: 10px; margin-top: 4px; }
+.corpus-paste-details summary { cursor: pointer; padding: 2px 0; user-select: none; }
+.corpus-paste-details summary:hover { color: var(--text); }
+.corpus-paste-details .corpus-textarea { margin-top: 8px; }
+
 .corpus-textarea {
   width: 100%;
   height: 160px;
