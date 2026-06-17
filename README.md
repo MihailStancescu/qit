@@ -63,6 +63,14 @@ uv run python experiments/train_qit0.py
 uv run python benchmarks/compare.py
 ```
 
+#### 5. Launch the Train UI
+
+```bash
+uv run uvicorn app.main:app --reload --port 8000
+```
+
+Then open [http://localhost:8000](http://localhost:8000) in your browser.
+
 ---
 
 ### Windows
@@ -96,6 +104,14 @@ uv run python experiments/train_qit0.py
 ```powershell
 uv run python benchmarks/compare.py
 ```
+
+#### 5. Launch the Train UI
+
+```powershell
+uv run uvicorn app.main:app --reload --port 8000
+```
+
+Then open [http://localhost:8000](http://localhost:8000) in your browser.
 
 > **Note:** PyTorch on Windows does not support MPS. All computation runs on CPU, which is the same backend used on Linux/macOS for QIT (`default.qubit`), so results are identical.
 
