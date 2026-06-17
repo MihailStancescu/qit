@@ -175,7 +175,7 @@ def save_results(cfg: Config, history: dict) -> None:
         },
     }
     json_path = out / "qit0_parity.json"
-    json_path.write_text(json.dumps(payload, indent=2))
+    json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
 
     # Plots
     epochs = range(1, n_epochs + 1)

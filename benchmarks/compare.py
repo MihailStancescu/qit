@@ -202,7 +202,7 @@ def save_results(results: list[RunResult]) -> None:
         for r in results
     }
     json_path = RESULTS_DIR / "benchmark.json"
-    json_path.write_text(json.dumps(payload, indent=2))
+    json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
 
     # ── Plots ─────────────────────────────────────────────────────────────────
     fig, axes = plt.subplots(1, 3, figsize=(16, 5))

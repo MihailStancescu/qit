@@ -10,7 +10,7 @@ Endpoints:
     GET  /api/train/{job_id}/stream → SSE: training progress events
     GET  /api/train/{job_id}        → job status + final metrics
     POST /api/generate              → generate text from prompt
-    POST /api/qa                    → Tolkien Q&A (RAG + Claude)
+    POST /api/qa                    → QIT Chat Q&A (RAG + Claude)
     GET  /api/status                → current app state summary
 
 Run:
@@ -37,7 +37,15 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app import qa as qa_module
-from app.trainer import STATE, drain_job_queue, get_job, start_training
+from app.trainer import (
+    CHECKPOINT_PATH,
+    STATE,
+    _drain_job_queue_nowait,
+    drain_job_queue,
+    get_job,
+    start_training,
+)
+from qit.backend import device_info
 
 # Cap for TF-IDF indexing in Q&A (500 KB is plenty for retrieval).
 QA_MAX_CHARS = 500_000
@@ -58,7 +66,7 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
-    return (STATIC_DIR / "index.html").read_text()
+    return (STATIC_DIR / "index.html").read_text(encoding="utf-8")
 
 
 # ── Corpus endpoints ──────────────────────────────────────────────────────────
@@ -142,12 +150,25 @@ class TrainRequest(BaseModel):
 
 @app.post("/api/train")
 async def start_train(req: TrainRequest):
-    # Read the corpus in a thread (may be a large file — avoid blocking the event loop).
-    corpus = req.corpus_text or await run_in_threadpool(STATE.get_corpus_text)
-    if not corpus:
-        raise HTTPException(400, "No corpus loaded. Upload a text file first.")
-    if len(corpus) < 50:
-        raise HTTPException(400, "Corpus too short.")
+    corpus_path = None
+    corpus_text = req.corpus_text
+
+    if corpus_text:
+        if len(corpus_text) < 50:
+            raise HTTPException(400, "Corpus too short.")
+        train_chars = len(corpus_text)
+    elif STATE.corpus_path and STATE.corpus_path.exists():
+        corpus_path = STATE.corpus_path
+        train_chars = corpus_path.stat().st_size
+        if train_chars < 50:
+            raise HTTPException(400, "Corpus too short.")
+    else:
+        corpus_text = await run_in_threadpool(STATE.get_corpus_text)
+        if not corpus_text:
+            raise HTTPException(400, "No corpus loaded. Upload a text file first.")
+        if len(corpus_text) < 50:
+            raise HTTPException(400, "Corpus too short.")
+        train_chars = len(corpus_text)
 
     ci = STATE.corpus_info()
     warning = None
@@ -158,10 +179,14 @@ async def start_train(req: TrainRequest):
             f"using {steps} steps/epoch to keep epochs manageable."
         )
 
-    valid_text = await run_in_threadpool(STATE.get_valid_text)
+    valid_path = STATE.valid_path if STATE.valid_path and STATE.valid_path.exists() else None
+    valid_text = None
+    if not valid_path:
+        valid_text = await run_in_threadpool(STATE.get_valid_text)
 
     job_id = start_training(
-        corpus_text=corpus,
+        corpus_text=corpus_text,
+        corpus_path=corpus_path,
         ctx_len=req.ctx_len,
         n_qubits_per_token=req.n_qubits_per_token,
         n_layers=req.n_layers,
@@ -172,12 +197,13 @@ async def start_train(req: TrainRequest):
         seed=req.seed,
         max_steps_per_epoch=req.max_steps_per_epoch,
         valid_corpus_text=valid_text,
+        valid_path=valid_path,
     )
     vi = STATE.valid_info()
     return {
         "job_id": job_id,
         "warning": warning,
-        "train_chars": len(corpus),
+        "train_chars": train_chars,
         "has_valid": vi["has_valid"],
         "valid_bytes": vi["bytes"],
     }
@@ -199,23 +225,33 @@ async def stream_training(job_id: str):
 
     async def event_stream():
         loop = asyncio.get_running_loop()
+        # Open the stream immediately so clients know the connection is alive.
+        yield ": connected\n\n"
         while True:
-            # Block in a thread executor so the event loop stays free.
-            events: list[dict] = await loop.run_in_executor(
-                None, drain_job_queue, job
-            )
+            if job.status in ("done", "error"):
+                # Drain any remaining events after the worker finishes.
+                events: list[dict] = await loop.run_in_executor(
+                    None, lambda: _drain_job_queue_nowait(job)
+                )
+                for evt in events:
+                    yield f"data: {json.dumps(evt)}\n\n"
+                return
+
+            events = await loop.run_in_executor(None, drain_job_queue, job)
             for evt in events:
                 yield f"data: {json.dumps(evt)}\n\n"
                 if evt.get("type") in ("done", "error"):
                     return
             if not events:
-                yield "data: {\"type\":\"heartbeat\"}\n\n"
+                yield 'data: {"type":"heartbeat"}\n\n'
+            await asyncio.sleep(0)
 
     return StreamingResponse(
         event_stream(),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
         },
     )
@@ -276,7 +312,7 @@ class QARequest(BaseModel):
 
 
 @app.post("/api/qa")
-async def ask_tolkien(req: QARequest):
+async def ask_qit(req: QARequest):
     # Read up to QA_MAX_CHARS from the corpus (file or pasted text).
     corpus = STATE.get_corpus_text(QA_MAX_CHARS)
     if not corpus:
@@ -321,4 +357,6 @@ async def app_status():
         "n_qubits":     model.qit.n_qubits if model else None,
         "ctx_len":      model.ctx_len if model else None,
         "active_jobs":  sum(1 for j in STATE.jobs.values() if j.status == "running"),
+        "checkpoint":   str(CHECKPOINT_PATH) if CHECKPOINT_PATH.exists() else None,
+        "device":       device_info(),
     }

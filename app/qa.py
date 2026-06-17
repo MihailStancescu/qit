@@ -1,5 +1,5 @@
 """
-Tolkien Q&A pipeline: TF-IDF retrieval → QIT-LM re-ranking → Claude answer.
+QIT Chat pipeline: TF-IDF retrieval → QIT-LM re-ranking → Claude answer.
 
 Requires ANTHROPIC_API_KEY in environment or passed explicitly at call time.
 """
@@ -13,9 +13,8 @@ import anthropic
 from app.corpus import chunk_text, qit_rerank, tfidf_search
 
 SYSTEM_PROMPT = """\
-You are a knowledgeable assistant specialising in Tolkien's legendarium — \
-The Hobbit, The Lord of the Rings, The Silmarillion, and related works. \
-Answer questions using ONLY the context passages provided. \
+You are a helpful assistant answering questions about a text corpus provided by the user. \
+Answer using ONLY the context passages supplied with each question. \
 If the context does not contain enough information to answer confidently, \
 say so clearly rather than speculating. Keep answers concise and grounded in the text.\
 """

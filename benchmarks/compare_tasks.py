@@ -264,7 +264,7 @@ def main():
         for task, models in all_results.items()
     }
     out = RESULTS_DIR / "benchmark_tasks.json"
-    out.write_text(json.dumps(payload, indent=2))
+    out.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"\n  JSON saved: {out}")
 
     # ── Figure ────────────────────────────────────────────────────────────────

@@ -25,7 +25,13 @@ import torch.nn as nn
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from qit.lm_model import QITLM
+from qit.backend import get_backend
 from tasks.charlm import CharVocab, make_charlm_loaders
+
+
+def _emit_status(status_callback, message: str, pct: float | None = None) -> None:
+    if status_callback:
+        status_callback(message, pct)
 
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -81,35 +87,56 @@ class EpochMetrics:
 
 def train(
     cfg: Config,
-    step_callback=None,   # callable(epoch, batch, total_batches, running_loss) — fires every STEP_EVERY batches
+    step_callback=None,
+    status_callback=None,
+    corpus_path: Path | None = None,
+    corpus_text: str | None = None,
+    valid_path: Path | None = None,
+    valid_text: str | None = None,
 ) -> Iterator[EpochMetrics]:
     """
     Generator training loop. Yields EpochMetrics after each epoch.
     step_callback receives within-epoch batch progress for live streaming.
     """
-    STEP_EVERY = 3   # report progress every N batches
+    STEP_EVERY = 1
 
     torch.manual_seed(cfg.seed)
 
-    # ── Data ──────────────────────────────────────────────────────────────────
-    corpus_text: str | None = None
-    if cfg.corpus is not None:
-        corpus_text = open(cfg.corpus).read()
+    # Resolve paths from cfg when not passed explicitly (CLI usage).
+    if corpus_path is None and cfg.corpus is not None:
+        corpus_path = Path(cfg.corpus)
+    if valid_path is None and cfg.valid_corpus is not None:
+        valid_path = Path(cfg.valid_corpus)
 
-    valid_text: str | None = None
-    if cfg.valid_corpus is not None:
-        valid_text = open(cfg.valid_corpus).read()
+    if corpus_path is not None:
+        _emit_status(status_callback, f"Preparing corpus from {corpus_path.name}…", 0)
+    elif corpus_text is not None:
+        _emit_status(status_callback, f"Preparing pasted corpus ({len(corpus_text):,} chars)…", 0)
+    else:
+        _emit_status(status_callback, "Using built-in demo corpus…", 0)
 
     train_loader, val_loader, vocab = make_charlm_loaders(
         text=corpus_text,
+        corpus_path=corpus_path,
+        valid_path=valid_path,
+        valid_text=valid_text,
         ctx_len=cfg.ctx_len,
         batch_size=cfg.batch_size,
         train_frac=cfg.train_frac,
         seed=cfg.seed,
-        valid_text=valid_text,
+        status_callback=status_callback,
+        progress_callback=status_callback,
     )
 
     # ── Model ─────────────────────────────────────────────────────────────────
+    n_qubits = cfg.ctx_len * cfg.n_qubits_per_token
+    backend, diff = get_backend()
+    _emit_status(
+        status_callback,
+        f"Initializing QIT-LM — {vocab.size} char vocab, {n_qubits} qubits, "
+        f"backend={backend}, diff={diff}…",
+        100,
+    )
     model = QITLM(
         vocab_size=vocab.size,
         ctx_len=cfg.ctx_len,
@@ -120,9 +147,25 @@ def train(
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.lr)
     criterion = nn.CrossEntropyLoss()
 
+    max_steps = cfg.max_steps_per_epoch
+    steps_per_epoch = min(len(train_loader), max_steps) if max_steps else len(train_loader)
+    _emit_status(
+        status_callback,
+        f"Model ready ({model.n_parameters} params). "
+        f"Epoch 1/{cfg.epochs}: starting quantum training "
+        f"({steps_per_epoch} batches/epoch — first batch is slowest)…",
+    )
+
     # ── Training ──────────────────────────────────────────────────────────────
     for epoch in range(1, cfg.epochs + 1):
         t0 = time.time()
+
+        if epoch > 1:
+            _emit_status(
+                status_callback,
+                f"Epoch {epoch}/{cfg.epochs}: training ({steps_per_epoch} batches)…",
+                0,
+            )
 
         # Train
         model.train()
@@ -149,6 +192,8 @@ def train(
 
         train_loss = train_loss_sum / max(batch_i + 1, 1)
 
+        _emit_status(status_callback, f"Epoch {epoch}/{cfg.epochs}: validating…", 95)
+
         # Validate (cap at same max_steps to keep epochs consistent)
         model.eval()
         val_loss_sum = 0.0
@@ -165,6 +210,7 @@ def train(
         # Sample generation
         sample = ""
         if epoch % cfg.gen_every == 0 or epoch == cfg.epochs:
+            _emit_status(status_callback, f"Epoch {epoch}/{cfg.epochs}: generating sample text…", 98)
             prompt_ids = vocab.encode(cfg.gen_seed)
             if not prompt_ids:
                 prompt_ids = [0]
@@ -190,12 +236,14 @@ def train(
         yield metrics, model, vocab
 
     # Save checkpoint
+    _emit_status(status_callback, "Training complete — writing checkpoint to disk…")
     out_dir = Path(cfg.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     torch.save(
         {"model_state": model.state_dict(), "vocab": vocab, "config": asdict(cfg)},
         out_dir / cfg.checkpoint_name,
     )
+    _emit_status(status_callback, f"Checkpoint saved: {out_dir / cfg.checkpoint_name}")
 
 
 # ── CLI helpers ───────────────────────────────────────────────────────────────
@@ -269,8 +317,8 @@ def main(cfg: Config) -> None:
     }
 
     json_path = out_dir / cfg.results_name
-    with open(json_path, "w") as f:
-        json.dump(results, f, indent=2)
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(results, f, indent=2, ensure_ascii=False)
 
     plot_path = out_dir / cfg.plot_name
     _plot(history, plot_path)

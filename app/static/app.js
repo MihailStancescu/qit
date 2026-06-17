@@ -201,16 +201,90 @@ function initChart() {
   });
 }
 
+const trainingPhase = document.getElementById('training-phase');
+const trainingLog   = document.getElementById('training-log');
+const trainingProgressBar = document.getElementById('training-progress-bar');
+const trainingPct   = document.getElementById('training-pct');
+const trainingEta   = document.getElementById('training-eta');
+
+const MAX_CHART_POINTS = 400;
+
+function formatDuration(seconds) {
+  const sec = Math.round(seconds);
+  if (sec < 60) return `${sec}s`;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  if (m < 60) return `${m}m ${s}s`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m`;
+}
+
+function formatEta(seconds) {
+  if (seconds == null || seconds < 0 || !Number.isFinite(seconds)) return '';
+  if (seconds < 60) return `~${seconds}s remaining`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (m < 60) return `~${m}m ${s}s remaining`;
+  const h = Math.floor(m / 60);
+  return `~${h}h ${m % 60}m remaining`;
+}
+
+function setProgress(pct) {
+  if (pct == null || Number.isNaN(pct)) return;
+  const clamped = Math.max(0, Math.min(100, pct));
+  trainingProgressBar.style.width = `${clamped}%`;
+  trainingPct.textContent = `${clamped.toFixed(0)}%`;
+}
+
+function appendTrainingLog(message) {
+  const ts = new Date().toLocaleTimeString();
+  const line = document.createElement('div');
+  line.className = 'training-log-line';
+  line.textContent = `${ts}  ${message}`;
+  trainingLog.appendChild(line);
+  trainingLog.scrollTop = trainingLog.scrollHeight;
+  trainingPhase.textContent = message;
+}
+
+function setTrainingStatus(message, pct = null) {
+  appendTrainingLog(message);
+  if (pct != null) setProgress(pct);
+}
+
+function updateBatchChart(epoch, batch, totalBatches, loss) {
+  const label = `E${epoch}.${batch}`;
+  chartLabels.push(label);
+  trainData.push(loss);
+  while (chartLabels.length > MAX_CHART_POINTS) {
+    chartLabels.shift();
+    trainData.shift();
+  }
+  if (chart) {
+    chart.data.datasets[1].data = valData;
+    chart.update('none');
+  }
+}
+
 function updateMetrics(d) {
   document.getElementById('m-train-loss').textContent = d.train_loss.toFixed(4);
   document.getElementById('m-val-loss').textContent   = d.val_loss.toFixed(4);
   document.getElementById('m-ppl').textContent        = d.val_ppl.toFixed(2);
   document.getElementById('m-bpc').textContent        = d.bpc.toFixed(3);
-  epochLabel.textContent = `Epoch ${d.epoch}`;
+  epochLabel.textContent = `Epoch ${d.epoch} / ${d.epochs || d.epoch}`;
+  if (d.pct_overall != null) setProgress(d.pct_overall);
+  if (d.eta_total_sec != null) {
+    trainingEta.textContent =
+      `Last epoch: ${formatDuration(d.elapsed)} · ${formatEta(d.eta_total_sec)} for remaining epochs`;
+  }
 
-  chartLabels.push(d.epoch);
+  chartLabels.push(`E${d.epoch}`);
   trainData.push(d.train_loss);
   valData.push(d.val_loss);
+  while (chartLabels.length > MAX_CHART_POINTS) {
+    chartLabels.shift();
+    trainData.shift();
+    if (valData.length) valData.shift();
+  }
   if (chart) chart.update('none');
 }
 
@@ -262,6 +336,10 @@ trainBtn.addEventListener('click', async () => {
   // Show training UI
   trainingIdle.classList.add('hidden');
   trainingActive.classList.remove('hidden');
+  trainingLog.innerHTML = '';
+  trainingPhase.textContent = 'Starting…';
+  setProgress(0);
+  trainingEta.textContent = '';
   sampleCard.style.display = 'none';
   trainBtn.disabled = true;
   trainBtn.textContent = '⏳ Training…';
@@ -269,28 +347,54 @@ trainBtn.addEventListener('click', async () => {
   statusBadge.textContent = 'Training…';
   initChart();
 
+  setTrainingStatus('Connecting to training stream…');
+
   // SSE stream
+  let trainingDone = false;
+  let sawTrainingEvent = false;
   const evtSource = new EventSource(`/api/train/${jobId}/stream`);
   evtSource.onmessage = e => {
     const data = JSON.parse(e.data);
-    if (data.type === 'batch') {
-      // Within-epoch batch progress — updates label and running loss
+    if (data.type === 'status') {
+      sawTrainingEvent = true;
+      setTrainingStatus(data.message, data.pct);
+    } else if (data.type === 'heartbeat') {
+      if (!trainingDone && !sawTrainingEvent) {
+        setTrainingStatus('Connected — waiting for first training update…');
+      }
+    } else if (data.type === 'batch') {
+      sawTrainingEvent = true;
       epochLabel.textContent =
-        `Epoch ${data.epoch}  —  batch ${data.batch} / ${data.total_batches}`;
+        `Epoch ${data.epoch}/${data.epochs || '?'}  —  batch ${data.batch} / ${data.total_batches}`;
       document.getElementById('m-train-loss').textContent =
         data.running_loss.toFixed(4);
+      if (data.pct != null) setProgress(data.pct_overall ?? data.pct);
+      if (data.eta_epoch_sec != null) {
+        trainingEta.textContent =
+          `Epoch ${data.epoch}: ${formatEta(data.eta_epoch_sec)} in this epoch`;
+      }
+      trainingPhase.textContent =
+        `Epoch ${data.epoch}: batch ${data.batch}/${data.total_batches} ` +
+        `(${data.pct ?? 0}% of epoch, loss ${data.running_loss.toFixed(4)})`;
+      updateBatchChart(data.epoch, data.batch, data.total_batches, data.running_loss);
     } else if (data.type === 'progress') {
+      sawTrainingEvent = true;
       updateMetrics(data);
+      trainingPhase.textContent =
+        `Epoch ${data.epoch} complete — val loss ${data.val_loss.toFixed(4)}, ppl ${data.val_ppl.toFixed(2)}`;
       if (data.sample) {
         sampleCard.style.display = '';
         sampleOutput.textContent = data.sample;
       }
     } else if (data.type === 'done') {
+      trainingDone = true;
+      setTrainingStatus('Training finished successfully.');
       evtSource.close();
       trainBtn.disabled = false;
       trainBtn.textContent = '▶ Train';
       refreshStatus();
     } else if (data.type === 'error') {
+      trainingDone = true;
       evtSource.close();
       alert(`Training error: ${data.message}`);
       trainBtn.disabled = false;
@@ -298,12 +402,17 @@ trainBtn.addEventListener('click', async () => {
       statusBadge.className = 'status-badge status-error';
       statusBadge.textContent = 'Training failed';
     }
-    // heartbeat events are intentionally ignored
   };
   evtSource.onerror = () => {
-    evtSource.close();
-    trainBtn.disabled = false;
-    trainBtn.textContent = '▶ Train';
+    if (trainingDone) return;
+    // EventSource retries automatically while CONNECTING; only bail when closed.
+    if (evtSource.readyState === EventSource.CLOSED) {
+      evtSource.close();
+      trainBtn.disabled = false;
+      trainBtn.textContent = '▶ Train';
+      statusBadge.className = 'status-badge status-error';
+      statusBadge.textContent = 'Training stream lost';
+    }
   };
 });
 
@@ -358,9 +467,9 @@ const apiKeyInput  = document.getElementById('api-key-input');
 clearChatBtn.addEventListener('click', () => {
   chatHistory.innerHTML = `
     <div class="chat-welcome">
-      <div class="welcome-icon">📖</div>
-      <h3>Ask anything about Tolkien</h3>
-      <p class="muted">Upload your corpus in QIT Studio, then ask questions here. Claude answers using passages retrieved from your text, optionally re-ranked by the quantum model.</p>
+      <div class="welcome-icon">⚛</div>
+      <h3>Ask about your corpus</h3>
+      <p class="muted">Train a model in QIT Studio, then ask questions here. Claude answers using passages retrieved from your text, re-ranked by the quantum model when available.</p>
     </div>`;
 });
 

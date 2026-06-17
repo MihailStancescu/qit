@@ -406,7 +406,7 @@ def save_all_results(
         "section4_first_token":      {r.name: to_dict(r) for r in s4},
     }
     out = RESULTS_DIR / "benchmark_full.json"
-    out.write_text(json.dumps(payload, indent=2))
+    out.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"  JSON: {out}")
 
     # ── Figures ───────────────────────────────────────────────────────────────

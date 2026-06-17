@@ -22,6 +22,44 @@ from experiments.train_charlm import Config, train
 from qit.lm_model import QITLM
 from tasks.charlm import CharVocab
 
+# Persisted trained model — survives server restarts; used by Generate + QIT Chat.
+MODEL_DIR = Path(__file__).parent / "data" / "models"
+MODEL_DIR.mkdir(parents=True, exist_ok=True)
+CHECKPOINT_PATH = MODEL_DIR / "qitlm_active.pt"
+
+
+def save_checkpoint(model: QITLM, vocab: CharVocab, config: dict) -> Path:
+    """Write model, vocab, and training config to disk."""
+    import torch
+
+    torch.save(
+        {"model_state": model.state_dict(), "vocab": vocab, "config": config},
+        CHECKPOINT_PATH,
+    )
+    return CHECKPOINT_PATH
+
+
+def load_checkpoint(path: Path | None = None) -> tuple[QITLM | None, CharVocab | None]:
+    """Load the active checkpoint from disk, or return (None, None) if missing."""
+    import torch
+
+    ckpt_path = path or CHECKPOINT_PATH
+    if not ckpt_path.exists():
+        return None, None
+
+    ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+    vocab: CharVocab = ckpt["vocab"]
+    config: dict = ckpt["config"]
+    model = QITLM(
+        vocab_size=vocab.size,
+        ctx_len=config["ctx_len"],
+        n_qubits_per_token=config.get("n_qubits_per_token", 2),
+        n_layers=config.get("n_layers", 2),
+    )
+    model.load_state_dict(ckpt["model_state"])
+    model.eval()
+    return model, vocab
+
 
 @dataclass
 class TrainingJob:
@@ -48,6 +86,13 @@ class AppState:
         self.valid_path: Path | None = None     # absolute path to validation file
         self.valid_corpus: str | None = None    # in-memory validation text
         self._lock = threading.Lock()
+        self._load_persisted_model()
+
+    def _load_persisted_model(self) -> None:
+        model, vocab = load_checkpoint()
+        if model is not None and vocab is not None:
+            self.active_model = model
+            self.active_vocab = vocab
 
     def get_corpus_text(self, max_chars: int | None = None) -> str | None:
         """Read corpus text, capped at max_chars. Prefers file path over in-memory."""
@@ -92,7 +137,8 @@ STATE = AppState()
 
 
 def start_training(
-    corpus_text: str,
+    corpus_text: str | None = None,
+    corpus_path: Path | None = None,
     ctx_len: int = 6,
     n_qubits_per_token: int = 2,
     n_layers: int = 2,
@@ -103,6 +149,7 @@ def start_training(
     seed: int = 42,
     max_steps_per_epoch: int | None = 200,
     valid_corpus_text: str | None = None,
+    valid_path: Path | None = None,
 ) -> str:
     """
     Kick off a training job in a background thread.
@@ -123,25 +170,92 @@ def start_training(
         seed=seed,
         max_steps_per_epoch=max_steps_per_epoch,
         corpus=None,   # we pass text directly below
+        out_dir=str(MODEL_DIR),
+        checkpoint_name=CHECKPOINT_PATH.name,
     )
 
     def _run():
+        import time as _time
+
+        job.queue.put({"type": "status", "message": "Starting training…", "pct": 0})
+
+        epoch_clock = {"start": 0.0, "last": 0.0}
+        epoch_times: list[float] = []
+
+        def status_cb(message: str, pct: float | None = None) -> None:
+            payload: dict[str, Any] = {"type": "status", "message": message}
+            if pct is not None:
+                payload["pct"] = round(pct, 1)
+            job.queue.put(payload)
+
         def step_cb(epoch, batch, total_batches, running_loss):
+            now = _time.time()
+            if batch == 1:
+                epoch_clock["start"] = now
+                epoch_clock["last"] = now
+            else:
+                epoch_clock["last"] = now
+            elapsed = now - epoch_clock["start"]
+            avg_batch = elapsed / batch
+            eta_epoch = int(avg_batch * max(total_batches - batch, 0))
+            pct_epoch = round(100.0 * batch / max(total_batches, 1), 1)
+            overall_pct = round(
+                100.0 * ((epoch - 1) + batch / max(total_batches, 1)) / cfg.epochs,
+                1,
+            )
+            if batch == 1:
+                status_cb(
+                    f"Epoch {epoch}/{cfg.epochs}: quantum batch 1/{total_batches} "
+                    f"(forward + backward on CPU)…",
+                    pct_epoch,
+                )
             job.queue.put({
                 "type": "batch",
                 "epoch": epoch,
+                "epochs": cfg.epochs,
                 "batch": batch,
                 "total_batches": total_batches,
                 "running_loss": round(running_loss, 4),
+                "pct": pct_epoch,
+                "pct_overall": overall_pct,
+                "eta_epoch_sec": eta_epoch,
             })
 
         try:
-            for metrics, model, vocab in _train_on_text(cfg, corpus_text, step_cb, valid_corpus_text):
+            for metrics, model, vocab in _train_on_text(
+                cfg,
+                corpus_text=corpus_text,
+                corpus_path=corpus_path,
+                valid_text=valid_corpus_text,
+                valid_path=valid_path,
+                step_cb=step_cb,
+                status_cb=status_cb,
+                job=job,
+            ):
                 job.model = model
                 job.vocab = vocab
-                job.queue.put({"type": "progress", **_metrics_to_dict(metrics)})
+                epoch_times.append(metrics.elapsed)
+                avg_epoch = sum(epoch_times) / len(epoch_times)
+                epochs_left = cfg.epochs - metrics.epoch
+                progress = _metrics_to_dict(metrics, cfg.epochs)
+                progress["eta_epoch_sec"] = int(avg_epoch)
+                progress["eta_total_sec"] = int(avg_epoch * epochs_left)
+                progress["pct_overall"] = round(100.0 * metrics.epoch / cfg.epochs, 1)
+                job.queue.put({"type": "progress", **progress})
 
             STATE.set_active(job.model, job.vocab)
+            if job.model is not None and job.vocab is not None:
+                job.queue.put({"type": "status", "message": "Saving active model for Generate and QIT Chat…"})
+                save_checkpoint(job.model, job.vocab, {
+                    "ctx_len": cfg.ctx_len,
+                    "n_qubits_per_token": cfg.n_qubits_per_token,
+                    "n_layers": cfg.n_layers,
+                    "epochs": cfg.epochs,
+                    "lr": cfg.lr,
+                    "batch_size": cfg.batch_size,
+                    "seed": cfg.seed,
+                })
+                job.queue.put({"type": "status", "message": f"Model saved to {CHECKPOINT_PATH.name}"})
             job.status = "done"
             job.queue.put({"type": "done"})
         except Exception as exc:
@@ -155,31 +269,33 @@ def start_training(
     return job_id
 
 
-def _train_on_text(cfg: Config, corpus_text: str, step_cb=None, valid_text: str | None = None):
-    """Write corpus (and optional valid) to temp files and run the training generator."""
-    import tempfile, os
-    tmp_paths = []
-    try:
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8") as f:
-            f.write(corpus_text)
-            cfg.corpus = f.name
-            tmp_paths.append(f.name)
+def _train_on_text(
+    cfg: Config,
+    *,
+    corpus_text: str | None = None,
+    corpus_path: Path | None = None,
+    valid_text: str | None = None,
+    valid_path: Path | None = None,
+    step_cb=None,
+    status_cb=None,
+    job: TrainingJob | None = None,
+):
+    """Run training using file paths (preferred) or in-memory text."""
+    yield from train(
+        cfg,
+        step_callback=step_cb,
+        status_callback=status_cb,
+        corpus_path=corpus_path,
+        corpus_text=corpus_text,
+        valid_path=valid_path,
+        valid_text=valid_text,
+    )
 
-        if valid_text is not None:
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".valid.txt", delete=False, encoding="utf-8") as f:
-                f.write(valid_text)
-                cfg.valid_corpus = f.name
-                tmp_paths.append(f.name)
 
-        yield from train(cfg, step_callback=step_cb)
-    finally:
-        for p in tmp_paths:
-            os.unlink(p)
-
-
-def _metrics_to_dict(metrics) -> dict[str, Any]:
+def _metrics_to_dict(metrics, epochs: int) -> dict[str, Any]:
     return {
         "epoch":      metrics.epoch,
+        "epochs":     epochs,
         "train_loss": round(metrics.train_loss, 4),
         "val_loss":   round(metrics.val_loss, 4),
         "train_ppl":  round(metrics.train_ppl, 3),
@@ -192,6 +308,17 @@ def _metrics_to_dict(metrics) -> dict[str, Any]:
 
 def get_job(job_id: str) -> TrainingJob | None:
     return STATE.jobs.get(job_id)
+
+
+def _drain_job_queue_nowait(job: TrainingJob) -> list[dict]:
+    """Drain all pending events without blocking."""
+    events: list[dict] = []
+    while True:
+        try:
+            events.append(job.queue.get_nowait())
+        except Empty:
+            break
+    return events
 
 
 def drain_job_queue(job: TrainingJob, timeout: float = 1.0) -> list[dict]:

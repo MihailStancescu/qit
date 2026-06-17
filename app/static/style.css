@@ -242,6 +242,80 @@ body {
   min-height: 80px;
   color: var(--muted);
   font-size: 13px;
+  padding: 12px 0;
+}
+
+.training-phase {
+  font-size: 13px;
+  color: var(--accent);
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  line-height: 1.4;
+}
+
+.training-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.training-progress-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.training-progress-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #7c3aed, #a78bfa);
+  transition: width 0.25s ease;
+}
+
+.training-pct {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  min-width: 36px;
+  text-align: right;
+}
+
+.training-eta {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 8px;
+  min-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.training-log {
+  max-height: 140px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.training-log-line {
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.training-log-line:last-child {
+  color: var(--text);
 }
 
 /* Sample output */

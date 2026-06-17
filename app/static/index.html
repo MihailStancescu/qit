@@ -24,7 +24,7 @@
 <!-- ── Tabs ────────────────────────────────────────────────────────────────── -->
 <div class="tabs-bar">
   <button class="tab-btn active" data-tab="studio">⚡ QIT Studio</button>
-  <button class="tab-btn" data-tab="chat">📖 Tolkien Chat</button>
+  <button class="tab-btn" data-tab="chat">💬 QIT Chat</button>
 </div>
 
 <!-- ── Main ────────────────────────────────────────────────────────────────── -->
@@ -123,6 +123,15 @@
             <span>Configure your model and press ▶ Train to begin.</span>
           </div>
           <div id="training-active" class="training-active hidden">
+            <div id="training-phase" class="training-phase">Starting…</div>
+            <div class="training-progress-row">
+              <div class="training-progress-track">
+                <div id="training-progress-bar" class="training-progress-bar"></div>
+              </div>
+              <span id="training-pct" class="training-pct">0%</span>
+            </div>
+            <div id="training-eta" class="training-eta"></div>
+            <div id="training-log" class="training-log" aria-live="polite"></div>
             <div class="metrics-row">
               <div class="metric">
                 <span class="metric-label">Train loss</span>
@@ -181,7 +190,7 @@
     </div>
   </div>
 
-  <!-- ══════════ TAB 2: TOLKIEN CHAT ═══════════════════════════════════════ -->
+  <!-- ══════════ TAB 2: QIT CHAT ═══════════════════════════════════════════ -->
   <div id="tab-chat" class="tab-content hidden">
     <div class="chat-layout">
 
@@ -229,9 +238,9 @@
       <div class="chat-main">
         <div id="chat-history" class="chat-history">
           <div class="chat-welcome">
-            <div class="welcome-icon">📖</div>
-            <h3>Ask anything about Tolkien</h3>
-            <p class="muted">Upload your corpus in QIT Studio, then ask questions here. Claude answers using passages retrieved from your text, optionally re-ranked by the quantum model.</p>
+            <div class="welcome-icon">⚛</div>
+            <h3>Ask about your corpus</h3>
+            <p class="muted">Train a model in QIT Studio, then ask questions here. Claude answers using passages retrieved from your text, re-ranked by the quantum model when available.</p>
           </div>
         </div>
 
@@ -239,7 +248,7 @@
           <textarea
             id="chat-input"
             class="chat-textarea"
-            placeholder="Who is Gandalf? What is the One Ring? Where is Rivendell?…"
+            placeholder="Ask a question about your corpus…"
             rows="1"
           ></textarea>
           <button id="chat-send-btn" class="btn btn-primary btn-send">↑</button>
