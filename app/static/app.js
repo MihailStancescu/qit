@@ -37,7 +37,7 @@ async function refreshStatus() {
     } else {
       statusBadge.className = 'status-badge status-idle';
       statusBadge.textContent = s.has_corpus
-        ? `Corpus loaded (${s.corpus_chars} chars) — no model yet`
+        ? `Corpus loaded (${fmtBytes(s.corpus_chars)}) — no model yet`
         : 'No model loaded';
       qitStatusNote.textContent = 'No QIT model — using TF-IDF only';
       qitStatusNote.className = 'pill pill-yellow';
@@ -59,47 +59,64 @@ const validFileInfo  = document.getElementById('valid-file-info');
 function fmtBytes(b) {
   if (b < 1024) return `${b} B`;
   if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
-  return `${(b / 1024 / 1024).toFixed(2)} MB`;
+  if (b < 1024 * 1024 * 1024) return `${(b / 1024 / 1024).toFixed(2)} MB`;
+  return `${(b / 1024 / 1024 / 1024).toFixed(2)} GB`;
 }
 
-// Train file: upload immediately, show filename + size, no textarea fill
+// Train file: show name+size immediately from File API, then upload in background
 fileUpload.addEventListener('change', async e => {
   const file = e.target.files[0];
   if (!file) return;
-  corpusFileInfo.textContent = 'Uploading…';
+  // Immediate feedback — no network needed to show filename and size
+  corpusFileInfo.textContent = `${file.name} — ${fmtBytes(file.size)} · Uploading…`;
+  corpusFileInfo.style.setProperty('color', 'var(--muted)');
+  // Yield to the browser so the DOM repaint happens before the fetch blocks
+  await new Promise(r => requestAnimationFrame(r));
   const form = new FormData();
   form.append('file', file);
   try {
     const r = await fetch('/api/corpus/upload', { method: 'POST', body: form });
-    if (!r.ok) { const err = await r.json(); throw new Error(err.detail); }
+    if (!r.ok) {
+      let detail = 'Upload failed';
+      try { detail = (await r.json()).detail; } catch (_) {}
+      throw new Error(detail);
+    }
     const d = await r.json();
-    corpusFileInfo.textContent = `${d.filename} — ${d.chars.toLocaleString()} chars (${fmtBytes(d.bytes)})`;
-    corpusFileInfo.style.color = 'var(--green)';
+    corpusFileInfo.textContent = `${file.name} — ${fmtBytes(d.bytes)} · Ready`;
+    corpusFileInfo.style.setProperty('color', 'var(--green)');
     refreshStatus();
   } catch (err) {
-    corpusFileInfo.textContent = `Error: ${err.message}`;
-    corpusFileInfo.style.color = 'var(--red, #f85149)';
+    corpusFileInfo.textContent = `${file.name} · Error: ${err.message}`;
+    corpusFileInfo.style.setProperty('color', 'var(--red)');
+    console.error('Corpus upload failed:', err);
   }
   fileUpload.value = '';
 });
 
-// Validation file: upload immediately, show filename + size
+// Validation file: same pattern — immediate feedback, then upload
 validUpload.addEventListener('change', async e => {
   const file = e.target.files[0];
   if (!file) return;
-  validFileInfo.textContent = 'Uploading…';
+  validFileInfo.textContent = `${file.name} — ${fmtBytes(file.size)} · Uploading…`;
+  validFileInfo.style.setProperty('color', 'var(--muted)');
+  await new Promise(r => requestAnimationFrame(r));
   const form = new FormData();
   form.append('file', file);
   try {
     const r = await fetch('/api/corpus/upload-valid', { method: 'POST', body: form });
-    if (!r.ok) { const err = await r.json(); throw new Error(err.detail); }
+    if (!r.ok) {
+      let detail = 'Upload failed';
+      try { detail = (await r.json()).detail; } catch (_) {}
+      throw new Error(detail);
+    }
     const d = await r.json();
-    validFileInfo.textContent = `${d.filename} — ${d.chars.toLocaleString()} chars (${fmtBytes(d.bytes)})`;
-    validFileInfo.style.color = 'var(--green)';
+    validFileInfo.textContent = `${file.name} — ${fmtBytes(d.bytes)} · Ready`;
+    validFileInfo.style.setProperty('color', 'var(--green)');
     refreshStatus();
   } catch (err) {
-    validFileInfo.textContent = `Error: ${err.message}`;
-    validFileInfo.style.color = 'var(--red, #f85149)';
+    validFileInfo.textContent = `${file.name} · Error: ${err.message}`;
+    validFileInfo.style.setProperty('color', 'var(--red)');
+    console.error('Valid corpus upload failed:', err);
   }
   validUpload.value = '';
 });
@@ -200,17 +217,21 @@ function updateMetrics(d) {
 trainBtn.addEventListener('click', async () => {
   const corpus = corpusInput.value.trim() || null;
   if (!corpus && !(await hasActiveCorpus())) {
-    alert('Load a corpus first.'); return;
+    alert('Load a corpus first (upload a .txt file or paste text).'); return;
   }
 
+  const maxStepsEl = document.getElementById('cfg-max-steps');
+  const maxStepsVal = maxStepsEl ? parseInt(maxStepsEl.value) : 200;
+
   const cfg = {
-    ctx_len:           parseInt(cfgCtx.value),
-    n_layers:          parseInt(cfgLayers.value),
-    epochs:            parseInt(document.getElementById('cfg-epochs').value),
-    lr:                parseFloat(document.getElementById('cfg-lr').value),
-    batch_size:        parseInt(document.getElementById('cfg-batch').value),
-    gen_every:         parseInt(document.getElementById('cfg-gen-every').value),
-    corpus_text:       corpus || undefined,
+    ctx_len:               parseInt(cfgCtx.value),
+    n_layers:              parseInt(cfgLayers.value),
+    epochs:                parseInt(document.getElementById('cfg-epochs').value),
+    lr:                    parseFloat(document.getElementById('cfg-lr').value),
+    batch_size:            parseInt(document.getElementById('cfg-batch').value),
+    gen_every:             parseInt(document.getElementById('cfg-gen-every').value),
+    max_steps_per_epoch:   isNaN(maxStepsVal) ? null : maxStepsVal,
+    corpus_text:           corpus || undefined,
   };
 
   // Start job

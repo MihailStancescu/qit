@@ -3,8 +3,9 @@ QIT Web App — FastAPI backend.
 
 Endpoints:
     GET  /                          → index.html
-    POST /api/corpus/upload         → upload text corpus
-    POST /api/corpus/text           → set corpus from raw text body
+    POST /api/corpus/upload         → stream-upload text corpus to disk
+    POST /api/corpus/upload-valid   → stream-upload validation corpus to disk
+    POST /api/corpus/text           → set corpus from raw text body (paste path)
     POST /api/train                 → start training job
     GET  /api/train/{job_id}/stream → SSE: training progress events
     GET  /api/train/{job_id}        → job status + final metrics
@@ -21,12 +22,16 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import shutil
 import sys
+import tempfile
+import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -34,9 +39,14 @@ from pydantic import BaseModel
 from app import qa as qa_module
 from app.trainer import STATE, drain_job_queue, get_job, start_training
 
-# Cap how many chars are fed to the quantum training loop.
-# Full corpus is still used for Q&A retrieval — only training is capped.
-MAX_TRAIN_CHARS = 25_000
+# Cap for TF-IDF indexing in Q&A (500 KB is plenty for retrieval).
+QA_MAX_CHARS = 500_000
+# Warn (but do not cap) when training corpus exceeds this size.
+TRAIN_WARN_BYTES = 100 * 1024 * 1024  # 100 MB
+
+# Persistent temp dir for uploaded corpora — survives the request lifecycle.
+UPLOAD_DIR = Path(tempfile.gettempdir()) / "qit_uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
 
 # ── App setup ─────────────────────────────────────────────────────────────────
 
@@ -59,40 +69,60 @@ class TextBody(BaseModel):
 
 @app.post("/api/corpus/text")
 async def set_corpus_text(body: TextBody):
-    """Accept raw text as the active corpus."""
+    """Accept raw pasted text as the active corpus (small files / quick experiments)."""
     text = body.text.strip()
     if len(text) < 50:
         raise HTTPException(400, "Corpus too short (need at least 50 characters).")
     STATE.active_corpus = text
+    STATE.corpus_path = None    # pasted text overrides any file upload
     return {"ok": True, "chars": len(text)}
 
 
 @app.post("/api/corpus/upload")
 async def upload_corpus(file: UploadFile = File(...)):
-    """Accept a .txt file upload as the active corpus."""
-    content = await file.read()
-    try:
-        text = content.decode("utf-8", errors="replace").strip()
-    except Exception as e:
-        raise HTTPException(400, f"Could not decode file: {e}")
-    if len(text) < 50:
+    """
+    Stream the uploaded file straight to disk — never holds GB content in RAM.
+    The file path is stored in STATE; training and Q&A read from it lazily.
+    """
+    dest = UPLOAD_DIR / f"corpus_{uuid.uuid4().hex}.txt"
+    await file.seek(0)
+
+    def _copy():
+        with dest.open("wb") as out:
+            shutil.copyfileobj(file.file, out)
+
+    await run_in_threadpool(_copy)
+
+    size = dest.stat().st_size
+    if size < 50:
+        dest.unlink(missing_ok=True)
         raise HTTPException(400, "File too short (need at least 50 characters).")
-    STATE.active_corpus = text
-    return {"ok": True, "filename": file.filename, "chars": len(text), "bytes": len(content)}
+
+    STATE.corpus_path = dest
+    STATE.active_corpus = None      # file upload overrides any paste
+    return {"ok": True, "filename": file.filename, "bytes": size}
 
 
 @app.post("/api/corpus/upload-valid")
 async def upload_valid_corpus(file: UploadFile = File(...)):
-    """Accept a .valid.txt file as the validation corpus."""
-    content = await file.read()
-    try:
-        text = content.decode("utf-8", errors="replace").strip()
-    except Exception as e:
-        raise HTTPException(400, f"Could not decode file: {e}")
-    if len(text) < 10:
+    """Stream a .valid.txt validation file to disk."""
+    dest = UPLOAD_DIR / f"valid_{uuid.uuid4().hex}.txt"
+    await file.seek(0)
+
+    def _copy():
+        with dest.open("wb") as out:
+            shutil.copyfileobj(file.file, out)
+
+    await run_in_threadpool(_copy)
+
+    size = dest.stat().st_size
+    if size < 10:
+        dest.unlink(missing_ok=True)
         raise HTTPException(400, "Validation file too short.")
-    STATE.valid_corpus = text
-    return {"ok": True, "filename": file.filename, "chars": len(text), "bytes": len(content)}
+
+    STATE.valid_path = dest
+    STATE.valid_corpus = None
+    return {"ok": True, "filename": file.filename, "bytes": size}
 
 
 # ── Training endpoints ────────────────────────────────────────────────────────
@@ -106,31 +136,32 @@ class TrainRequest(BaseModel):
     batch_size: int = 8
     gen_every: int = 10
     seed: int = 42
-    corpus_text: str | None = None   # optional inline corpus; else uses active corpus
+    max_steps_per_epoch: int | None = 200   # None = unlimited (slow for large corpora)
+    corpus_text: str | None = None          # optional inline corpus; else uses active corpus
 
 
 @app.post("/api/train")
 async def start_train(req: TrainRequest):
-    corpus = req.corpus_text or STATE.active_corpus
+    # Read the corpus in a thread (may be a large file — avoid blocking the event loop).
+    corpus = req.corpus_text or await run_in_threadpool(STATE.get_corpus_text)
     if not corpus:
         raise HTTPException(400, "No corpus loaded. Upload a text file first.")
     if len(corpus) < 50:
         raise HTTPException(400, "Corpus too short.")
 
-    # Store full corpus for Q&A retrieval, but cap what goes to the quantum trainer.
-    STATE.active_corpus = corpus
+    ci = STATE.corpus_info()
     warning = None
-    train_corpus = corpus
-    if len(corpus) > MAX_TRAIN_CHARS:
-        train_corpus = corpus[:MAX_TRAIN_CHARS]
+    if ci["bytes"] > TRAIN_WARN_BYTES:
+        steps = req.max_steps_per_epoch or "unlimited"
         warning = (
-            f"Training corpus capped at {MAX_TRAIN_CHARS:,} chars "
-            f"(your file has {len(corpus):,}). "
-            f"Full text is still used for Tolkien Chat retrieval."
+            f"Large corpus ({ci['bytes'] / 1024 / 1024:.1f} MB) — "
+            f"using {steps} steps/epoch to keep epochs manageable."
         )
 
+    valid_text = await run_in_threadpool(STATE.get_valid_text)
+
     job_id = start_training(
-        corpus_text=train_corpus,
+        corpus_text=corpus,
         ctx_len=req.ctx_len,
         n_qubits_per_token=req.n_qubits_per_token,
         n_layers=req.n_layers,
@@ -139,14 +170,16 @@ async def start_train(req: TrainRequest):
         batch_size=req.batch_size,
         gen_every=req.gen_every,
         seed=req.seed,
-        valid_corpus_text=STATE.valid_corpus,
+        max_steps_per_epoch=req.max_steps_per_epoch,
+        valid_corpus_text=valid_text,
     )
+    vi = STATE.valid_info()
     return {
         "job_id": job_id,
         "warning": warning,
-        "train_chars": len(train_corpus),
-        "has_valid": STATE.valid_corpus is not None,
-        "valid_chars": len(STATE.valid_corpus) if STATE.valid_corpus else 0,
+        "train_chars": len(corpus),
+        "has_valid": vi["has_valid"],
+        "valid_bytes": vi["bytes"],
     }
 
 
@@ -168,7 +201,6 @@ async def stream_training(job_id: str):
         loop = asyncio.get_running_loop()
         while True:
             # Block in a thread executor so the event loop stays free.
-            # drain_job_queue blocks up to 1 s waiting for the next event.
             events: list[dict] = await loop.run_in_executor(
                 None, drain_job_queue, job
             )
@@ -177,7 +209,6 @@ async def stream_training(job_id: str):
                 if evt.get("type") in ("done", "error"):
                     return
             if not events:
-                # Heartbeat keeps the SSE connection alive between epochs.
                 yield "data: {\"type\":\"heartbeat\"}\n\n"
 
     return StreamingResponse(
@@ -214,7 +245,7 @@ class GenerateRequest(BaseModel):
 
 @app.post("/api/generate")
 async def generate_text(req: GenerateRequest):
-    model, vocab, _ = STATE.get_active()
+    model, vocab = STATE.get_active()
     if model is None or vocab is None:
         raise HTTPException(400, "No trained model available. Train a model first.")
 
@@ -246,16 +277,15 @@ class QARequest(BaseModel):
 
 @app.post("/api/qa")
 async def ask_tolkien(req: QARequest):
-    _, _, corpus = STATE.get_active()
-    if not corpus:
-        corpus = STATE.active_corpus
+    # Read up to QA_MAX_CHARS from the corpus (file or pasted text).
+    corpus = STATE.get_corpus_text(QA_MAX_CHARS)
     if not corpus:
         raise HTTPException(
             400,
             "No corpus loaded. Upload a text file in QIT Studio first.",
         )
 
-    model, vocab, _ = STATE.get_active()
+    model, vocab = STATE.get_active()
     api_key = req.api_key or os.environ.get("ANTHROPIC_API_KEY", "")
 
     loop = asyncio.get_event_loop()
@@ -277,12 +307,14 @@ async def ask_tolkien(req: QARequest):
 
 @app.get("/api/status")
 async def app_status():
-    model, vocab, corpus = STATE.get_active()
+    model, vocab = STATE.get_active()
+    ci = STATE.corpus_info()
+    vi = STATE.valid_info()
     return {
-        "has_corpus":   corpus is not None,
-        "corpus_chars": len(corpus) if corpus else 0,
-        "has_valid":    STATE.valid_corpus is not None,
-        "valid_chars":  len(STATE.valid_corpus) if STATE.valid_corpus else 0,
+        "has_corpus":   ci["has_corpus"],
+        "corpus_chars": ci["bytes"],    # bytes ≈ chars for ASCII/Latin text
+        "has_valid":    vi["has_valid"],
+        "valid_bytes":  vi["bytes"],
         "has_model":    model is not None,
         "vocab_size":   vocab.size if vocab else None,
         "n_parameters": model.n_parameters if model else None,

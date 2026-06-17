@@ -41,19 +41,51 @@ class AppState:
         self.jobs: dict[str, TrainingJob] = {}
         self.active_model: QITLM | None = None
         self.active_vocab: CharVocab | None = None
-        self.active_corpus: str | None = None
-        self.valid_corpus: str | None = None
+        # Corpus: either a file path (large uploads) or in-memory text (paste).
+        # Path takes priority when both are set.
+        self.corpus_path: Path | None = None    # absolute path to uploaded file
+        self.active_corpus: str | None = None   # in-memory paste text
+        self.valid_path: Path | None = None     # absolute path to validation file
+        self.valid_corpus: str | None = None    # in-memory validation text
         self._lock = threading.Lock()
 
-    def set_active(self, model: QITLM, vocab: CharVocab, corpus: str) -> None:
+    def get_corpus_text(self, max_chars: int | None = None) -> str | None:
+        """Read corpus text, capped at max_chars. Prefers file path over in-memory."""
+        if self.corpus_path and self.corpus_path.exists():
+            with open(self.corpus_path, encoding="utf-8", errors="replace") as f:
+                return f.read(max_chars) if max_chars else f.read()
+        return self.active_corpus
+
+    def get_valid_text(self) -> str | None:
+        if self.valid_path and self.valid_path.exists():
+            with open(self.valid_path, encoding="utf-8", errors="replace") as f:
+                return f.read()
+        return self.valid_corpus
+
+    def corpus_info(self) -> dict:
+        if self.corpus_path and self.corpus_path.exists():
+            size = self.corpus_path.stat().st_size
+            return {"source": "file", "bytes": size, "has_corpus": True}
+        if self.active_corpus:
+            return {"source": "paste", "bytes": len(self.active_corpus.encode()), "has_corpus": True}
+        return {"source": None, "bytes": 0, "has_corpus": False}
+
+    def valid_info(self) -> dict:
+        if self.valid_path and self.valid_path.exists():
+            size = self.valid_path.stat().st_size
+            return {"source": "file", "bytes": size, "has_valid": True}
+        if self.valid_corpus:
+            return {"source": "paste", "bytes": len(self.valid_corpus.encode()), "has_valid": True}
+        return {"source": None, "bytes": 0, "has_valid": False}
+
+    def set_active(self, model: QITLM, vocab: CharVocab) -> None:
         with self._lock:
             self.active_model = model
             self.active_vocab = vocab
-            self.active_corpus = corpus
 
-    def get_active(self) -> tuple[QITLM | None, CharVocab | None, str | None]:
+    def get_active(self) -> tuple[QITLM | None, CharVocab | None]:
         with self._lock:
-            return self.active_model, self.active_vocab, self.active_corpus
+            return self.active_model, self.active_vocab
 
 
 STATE = AppState()
@@ -69,6 +101,7 @@ def start_training(
     batch_size: int = 8,
     gen_every: int = 10,
     seed: int = 42,
+    max_steps_per_epoch: int | None = 200,
     valid_corpus_text: str | None = None,
 ) -> str:
     """
@@ -88,6 +121,7 @@ def start_training(
         batch_size=batch_size,
         gen_every=gen_every,
         seed=seed,
+        max_steps_per_epoch=max_steps_per_epoch,
         corpus=None,   # we pass text directly below
     )
 
@@ -107,7 +141,7 @@ def start_training(
                 job.vocab = vocab
                 job.queue.put({"type": "progress", **_metrics_to_dict(metrics)})
 
-            STATE.set_active(job.model, job.vocab, corpus_text)
+            STATE.set_active(job.model, job.vocab)
             job.status = "done"
             job.queue.put({"type": "done"})
         except Exception as exc:

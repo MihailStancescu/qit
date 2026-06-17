@@ -99,6 +99,9 @@
             <label>Generate every N epochs
               <input type="number" id="cfg-gen-every" value="10" min="1" max="50" />
             </label>
+            <label>Max steps / epoch
+              <input type="number" id="cfg-max-steps" value="200" min="10" max="10000" title="Limits batches per epoch — set higher for large corpora (more steps = longer epochs)" />
+            </label>
           </div>
           <div class="config-footer">
             <span id="qubits-label" class="muted">Total qubits: 12</span>

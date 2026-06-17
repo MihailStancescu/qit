@@ -17,6 +17,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from qit.backend import get_backend
 from qit.model import QIT
 
 
@@ -34,7 +35,7 @@ class QITLM(nn.Module):
         ctx_len: int = 8,
         n_qubits_per_token: int = 2,
         n_layers: int = 2,
-        backend: str = "default.qubit",
+        backend: str | None = None,
         entangle_topology: str = "ring",
     ):
         super().__init__()
