@@ -35,29 +35,74 @@ QIT-0 converges **12–58× faster** with fewer parameters than any baseline. Th
 
 ## Quick Start
 
-### 1. Install uv (if not already installed)
+### macOS / Linux
+
+#### 1. Install uv
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-### 2. Clone and set up the environment
+#### 2. Clone and set up the environment
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/MihailStancescu/qit.git
 cd qit
 uv sync          # creates .venv and installs all dependencies
 ```
 
-Dependencies installed: `pennylane`, `torch`, `numpy`, `matplotlib`, `scikit-learn`.
-
-### 3. Train QIT-0 on the parity task
+#### 3. Train QIT-0 on the parity task
 
 ```bash
 uv run python experiments/train_qit0.py
 ```
 
-Expected output:
+#### 4. Run the full benchmark
+
+```bash
+uv run python benchmarks/compare.py
+```
+
+---
+
+### Windows
+
+#### 1. Install uv
+
+Open **PowerShell** and run:
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+Then restart PowerShell so `uv` is on your PATH.
+
+#### 2. Clone and set up the environment
+
+```powershell
+git clone https://github.com/MihailStancescu/qit.git
+cd qit
+uv sync
+```
+
+#### 3. Train QIT-0 on the parity task
+
+```powershell
+uv run python experiments/train_qit0.py
+```
+
+#### 4. Run the full benchmark
+
+```powershell
+uv run python benchmarks/compare.py
+```
+
+> **Note:** PyTorch on Windows does not support MPS. All computation runs on CPU, which is the same backend used on Linux/macOS for QIT (`default.qubit`), so results are identical.
+
+---
+
+### Expected output (parity task)
+
 ```
 QIT-0  |  Parity Task
   qubits : 4 tokens × 2 qubits = 8 total
@@ -73,13 +118,67 @@ Target accuracy 95% reached — stopping at epoch 17.
 
 Results (loss/accuracy curves + epoch timing) are saved to `results/qit0_parity.png`.
 
-### 4. Run the full benchmark
+Dependencies installed: `pennylane`, `torch`, `numpy`, `matplotlib`, `scikit-learn`, `fastapi`, `uvicorn`.
 
+---
+
+## Train App (Web UI)
+
+The train app is a FastAPI web server with a browser UI for uploading a text corpus, launching training jobs, watching live progress, and generating text from the trained model.
+
+### Start the server
+
+**macOS / Linux:**
 ```bash
-uv run python benchmarks/compare.py
+uv run uvicorn app.main:app --reload --port 8000
 ```
 
-Trains QIT-0, MLP, GRU, and Transformer on the same dataset and produces a comparison table + `results/benchmark.png`.
+**Windows (PowerShell):**
+```powershell
+uv run uvicorn app.main:app --reload --port 8000
+```
+
+Then open [http://localhost:8000](http://localhost:8000) in your browser.
+
+### Workflow
+
+1. **Upload a corpus** — paste text directly or upload a `.txt` file (streaming upload, no size limit).
+2. **Optionally upload a validation file** — a separate `.valid.txt`; if omitted, 10% of the corpus is held out automatically.
+3. **Configure training** — set context length, qubits per token, layers, epochs, learning rate, and batch size.
+4. **Start training** — progress streams live to the browser (loss, perplexity, bits-per-character, and generated text samples).
+5. **Generate text** — once training completes, send a prompt to the `/api/generate` endpoint directly from the UI.
+
+### Train from the command line instead
+
+```bash
+# Built-in demo corpus (short fairy-tale text)
+uv run python experiments/train_charlm.py
+
+# Your own corpus
+uv run python experiments/train_charlm.py --corpus path/to/corpus.txt
+
+# With a separate validation file and custom settings
+uv run python experiments/train_charlm.py \
+  --corpus path/to/train.txt \
+  --valid  path/to/valid.txt \
+  --ctx_len 8 --epochs 80 --lr 0.03
+```
+
+**Key flags:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--corpus` | built-in demo | Path to training `.txt` file |
+| `--valid` | — | Path to validation `.txt` (overrides 90/10 split) |
+| `--ctx_len` | 6 | Context window = number of input tokens |
+| `--n_qubits_per_token` | 2 | Qubits per character |
+| `--n_layers` | 2 | Quantum attention depth |
+| `--epochs` | 60 | Training epochs |
+| `--lr` | 0.05 | Adam learning rate |
+| `--batch_size` | 8 | Batch size |
+| `--temperature` | 0.8 | Sampling temperature for text generation |
+
+Outputs are written to `results/`: checkpoint (`qitlm_checkpoint.pt`), JSON metrics (`qitlm_charlm.json`), and a loss/perplexity plot (`qitlm_charlm.png`).
 
 ---
 
