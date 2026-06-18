@@ -152,6 +152,7 @@ body {
 }
 
 /* Corpus */
+.corpus-hint { margin: 0 0 12px; line-height: 1.45; }
 .corpus-uploads { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
 .corpus-upload-row { display: flex; align-items: center; gap: 10px; }
 .corpus-upload-label { white-space: nowrap; cursor: pointer; }

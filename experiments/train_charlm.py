@@ -47,8 +47,6 @@ class Config:
     epochs: int = 60
     lr: float = 0.05
     batch_size: int = 8
-    max_steps_per_epoch: int | None = None  # None = use all batches
-
     # Data
     corpus: str | None = None       # path to .txt file; None = built-in demo corpus
     valid_corpus: str | None = None # path to separate .valid.txt; overrides train_frac split
@@ -147,8 +145,7 @@ def train(
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.lr)
     criterion = nn.CrossEntropyLoss()
 
-    max_steps = cfg.max_steps_per_epoch
-    steps_per_epoch = min(len(train_loader), max_steps) if max_steps else len(train_loader)
+    steps_per_epoch = len(train_loader)
     _emit_status(
         status_callback,
         f"Model ready ({model.n_parameters} params). "
@@ -170,11 +167,8 @@ def train(
         # Train
         model.train()
         train_loss_sum = 0.0
-        max_steps = cfg.max_steps_per_epoch
-        total_steps = min(len(train_loader), max_steps) if max_steps else len(train_loader)
+        total_steps = len(train_loader)
         for batch_i, (x, y) in enumerate(train_loader):
-            if max_steps and batch_i >= max_steps:
-                break
             optimizer.zero_grad()
             logits = model(x)               # (batch, vocab_size)
             loss = criterion(logits, y)
@@ -194,14 +188,12 @@ def train(
 
         _emit_status(status_callback, f"Epoch {epoch}/{cfg.epochs}: validating…", 95)
 
-        # Validate (cap at same max_steps to keep epochs consistent)
+        # Validate
         model.eval()
         val_loss_sum = 0.0
         n_val_batches = 0
         with torch.no_grad():
             for val_i, (x, y) in enumerate(val_loader):
-                if max_steps and val_i >= max_steps:
-                    break
                 logits = model(x)
                 val_loss_sum += criterion(logits, y).item()
                 n_val_batches += 1

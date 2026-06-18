@@ -49,8 +49,8 @@ from qit.backend import device_info
 
 # Cap for TF-IDF indexing in Q&A (500 KB is plenty for retrieval).
 QA_MAX_CHARS = 500_000
-# Warn (but do not cap) when training corpus exceeds this size.
-TRAIN_WARN_BYTES = 100 * 1024 * 1024  # 100 MB
+# Suggest smaller corpora for training — QIT-LM is tiny (~3k params).
+TRAIN_RECOMMENDED_BYTES = 2 * 1024 * 1024   # 2 MB
 
 # Persistent temp dir for uploaded corpora — survives the request lifecycle.
 UPLOAD_DIR = Path(tempfile.gettempdir()) / "qit_uploads"
@@ -144,7 +144,6 @@ class TrainRequest(BaseModel):
     batch_size: int = 8
     gen_every: int = 10
     seed: int = 42
-    max_steps_per_epoch: int | None = 200   # None = unlimited (slow for large corpora)
     corpus_text: str | None = None          # optional inline corpus; else uses active corpus
 
 
@@ -170,19 +169,18 @@ async def start_train(req: TrainRequest):
             raise HTTPException(400, "Corpus too short.")
         train_chars = len(corpus_text)
 
-    ci = STATE.corpus_info()
-    warning = None
-    if ci["bytes"] > TRAIN_WARN_BYTES:
-        steps = req.max_steps_per_epoch or "unlimited"
-        warning = (
-            f"Large corpus ({ci['bytes'] / 1024 / 1024:.1f} MB) — "
-            f"using {steps} steps/epoch to keep epochs manageable."
-        )
-
     valid_path = STATE.valid_path if STATE.valid_path and STATE.valid_path.exists() else None
     valid_text = None
     if not valid_path:
         valid_text = await run_in_threadpool(STATE.get_valid_text)
+
+    warning = None
+    if train_chars > TRAIN_RECOMMENDED_BYTES:
+        rec_mb = TRAIN_RECOMMENDED_BYTES / 1024 / 1024
+        warning = (
+            f"Corpus is {train_chars / 1024 / 1024:.1f} MB — training may be slow and memory-heavy. "
+            f"QIT-LM has only ~3k parameters; a {rec_mb:.0f} MB excerpt is usually enough."
+        )
 
     job_id = start_training(
         corpus_text=corpus_text,
@@ -195,7 +193,6 @@ async def start_train(req: TrainRequest):
         batch_size=req.batch_size,
         gen_every=req.gen_every,
         seed=req.seed,
-        max_steps_per_epoch=req.max_steps_per_epoch,
         valid_corpus_text=valid_text,
         valid_path=valid_path,
     )
@@ -359,4 +356,5 @@ async def app_status():
         "active_jobs":  sum(1 for j in STATE.jobs.values() if j.status == "running"),
         "checkpoint":   str(CHECKPOINT_PATH) if CHECKPOINT_PATH.exists() else None,
         "device":       device_info(),
+        "train_recommended_bytes": TRAIN_RECOMMENDED_BYTES,
     }

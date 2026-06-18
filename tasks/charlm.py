@@ -7,10 +7,10 @@ Vocab is built from the training text — no fixed tokenizer needed.
 
 from __future__ import annotations
 
+import numpy as np
 import torch
-from torch.utils.data import DataLoader, Dataset, random_split
+from torch.utils.data import DataLoader, Dataset, Subset
 
-# Short, repetitive demo corpus — good for tiny QIT-LM to memorize patterns.
 DEMO_CORPUS = (
     "the quick brown fox jumps over the lazy dog "
     "the fox ran fast and the dog ran slow "
@@ -64,10 +64,11 @@ class CharLMDataset(Dataset):
     """
 
     def __init__(self, token_ids, ctx_len: int, vocab: CharVocab):
-        if len(token_ids) <= ctx_len:
+        n_tokens = len(token_ids)
+        if n_tokens <= ctx_len:
             raise ValueError(
                 f"Text too short for ctx_len={ctx_len}: "
-                f"need >{ctx_len} tokens, got {len(token_ids)}"
+                f"need >{ctx_len} tokens, got {n_tokens}"
             )
         self.ids = token_ids
         self.ctx_len = ctx_len
@@ -76,25 +77,24 @@ class CharLMDataset(Dataset):
     @classmethod
     def from_string(cls, text: str, ctx_len: int) -> "CharLMDataset":
         vocab = CharVocab.from_text(text)
-        return cls(vocab.encode(text), ctx_len, vocab)
-
-    @classmethod
-    def from_file(cls, path: str, ctx_len: int) -> "CharLMDataset":
-        with open(path, encoding="utf-8", errors="replace") as f:
-            return cls.from_string(f.read(), ctx_len)
-
-    @classmethod
-    def demo(cls, ctx_len: int = 8) -> "CharLMDataset":
-        return cls.from_string(DEMO_CORPUS, ctx_len)
+        ids = np.asarray(vocab.encode(text), dtype=np.uint32)
+        return cls(ids, ctx_len, vocab)
 
     def __len__(self) -> int:
         return len(self.ids) - self.ctx_len
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
-        sl = self.ids[idx : idx + self.ctx_len + 1]
-        x = torch.as_tensor(sl[:-1], dtype=torch.long)
-        y = torch.as_tensor(sl[-1], dtype=torch.long)
+        sl = np.asarray(
+            self.ids[idx : idx + self.ctx_len + 1],
+            dtype=np.int64,
+        )
+        x = torch.from_numpy(sl[:-1].copy())
+        y = torch.tensor(int(sl[-1]), dtype=torch.long)
         return x, y
+
+    @property
+    def n_tokens(self) -> int:
+        return len(self.ids)
 
     def __repr__(self) -> str:
         return (
@@ -115,28 +115,9 @@ def make_charlm_loaders(
     status_callback=None,
     progress_callback=None,
 ) -> tuple[DataLoader, DataLoader, CharVocab]:
-    """
-    Build train/val DataLoaders.
-
-    If valid_text is provided it is used as the validation set and the
-    train corpus is used in full (train_frac is ignored). The vocab is
-    built from the train text; characters in valid_text not seen during
-    training are silently filtered by CharVocab.encode().
-
-    Otherwise a positional split (first train_frac of windows) is used.
-
-    Returns:
-        (train_loader, val_loader, vocab)
-    """
     from pathlib import Path
 
-    from app.corpus_cache import (
-        encode_path,
-        encode_text,
-        get_or_encode_file,
-        get_or_encode_text,
-    )
-    from torch.utils.data import Subset
+    from app.corpus_cache import get_or_encode_file, get_or_encode_text, get_or_encode_with_vocab
 
     def _status(msg: str, pct: float | None = None) -> None:
         if status_callback:
@@ -152,7 +133,7 @@ def make_charlm_loaders(
         _status(f"Preparing corpus from {path.name}…", 0)
         vocab, train_ids, from_cache = get_or_encode_file(path, ctx_len, _progress)
         if from_cache:
-            _status(f"Using cached encoding for {path.name}", 100)
+            _status(f"Using cached encoding for {path.name} (memory-mapped)", 100)
         train_ds = CharLMDataset(train_ids, ctx_len, vocab)
     else:
         corpus = text if text is not None else DEMO_CORPUS
@@ -168,40 +149,53 @@ def make_charlm_loaders(
             vocab = train_ds.vocab
 
     _status(
-        f"Train set ready: {len(train_ds):,} windows, {vocab.size} unique characters",
+        f"Train set: {len(train_ds):,} windows ({vocab.size} unique chars)",
         100,
     )
 
     if valid_path is not None:
         vpath = Path(valid_path)
-        _status(f"Encoding validation file {vpath.name}…", 0)
-        valid_ids = encode_path(vpath, vocab, _progress, vpath.name)
-        if len(valid_ids) <= ctx_len:
-            raise ValueError(
-                f"Validation text too short for ctx_len={ctx_len}: "
-                f"need >{ctx_len} encoded chars, got {len(valid_ids)}"
-            )
+        _status(f"Loading validation file {vpath.name}…", 0)
+        valid_ids, from_cache = get_or_encode_with_vocab(vpath, vocab, _progress)
+        if from_cache:
+            _status(f"Using cached validation encoding for {vpath.name}", 100)
         val_ds = CharLMDataset(valid_ids, ctx_len, vocab)
-        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
-        val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False)
-        _status(f"Validation set ready: {len(val_ds):,} windows", 100)
     elif valid_text is not None:
-        _status(f"Encoding validation corpus ({len(valid_text):,} characters)…", 0)
-        valid_ids = encode_text(valid_text, vocab, _progress, "validation")
+        _status(f"Encoding validation text ({len(valid_text):,} characters)…", 0)
+        valid_ids = np.asarray(vocab.encode(valid_text), dtype=np.uint32)
         if len(valid_ids) <= ctx_len:
             raise ValueError(
                 f"Validation text too short for ctx_len={ctx_len}: "
                 f"need >{ctx_len} encoded chars, got {len(valid_ids)}"
             )
         val_ds = CharLMDataset(valid_ids, ctx_len, vocab)
-        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
-        val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False)
-        _status(f"Validation set ready: {len(val_ds):,} windows", 100)
     else:
         n_train = int(len(train_ds) * train_frac)
-        n_val   = len(train_ds) - n_train
-        _status(f"Splitting data: {n_train:,} train / {n_val:,} val windows", 100)
-        train_loader = DataLoader(Subset(train_ds, range(n_train)),           batch_size=batch_size, shuffle=True)
-        val_loader   = DataLoader(Subset(train_ds, range(n_train, n_train + n_val)), batch_size=batch_size, shuffle=False)
+        n_val = len(train_ds) - n_train
+        _status(
+            f"Validation split: last {n_val:,} windows ({100 - train_frac * 100:.0f}% of train)",
+            100,
+        )
+        train_loader = DataLoader(
+            Subset(train_ds, range(n_train)),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=0,
+        )
+        val_loader = DataLoader(
+            Subset(train_ds, range(n_train, n_train + n_val)),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=0,
+        )
+        _status(f"Validation set: {n_val:,} windows", 100)
+        return train_loader, val_loader, vocab
 
+    _status(f"Validation set: {len(val_ds):,} windows", 100)
+    train_loader = DataLoader(
+        train_ds, batch_size=batch_size, shuffle=True, num_workers=0
+    )
+    val_loader = DataLoader(
+        val_ds, batch_size=batch_size, shuffle=False, num_workers=0
+    )
     return train_loader, val_loader, vocab

@@ -39,6 +39,7 @@ async function refreshStatus() {
       statusBadge.textContent = s.has_corpus
         ? `Corpus loaded (${fmtBytes(s.corpus_chars)}) — no model yet`
         : 'No model loaded';
+      activeCorpusBytes = s.corpus_chars || 0;
       qitStatusNote.textContent = 'No QIT model — using TF-IDF only';
       qitStatusNote.className = 'pill pill-yellow';
     }
@@ -46,6 +47,16 @@ async function refreshStatus() {
 }
 setInterval(refreshStatus, 4000);
 refreshStatus();
+
+const TRAIN_RECOMMENDED_BYTES = 2 * 1024 * 1024;
+let activeCorpusBytes = 0;
+
+function trainSizeNote(bytes) {
+  if (bytes > TRAIN_RECOMMENDED_BYTES) {
+    return ' · large — smaller excerpt recommended for training';
+  }
+  return '';
+}
 
 // ── Corpus ────────────────────────────────────────────────────────────────────
 const corpusInput    = document.getElementById('corpus-input');
@@ -82,7 +93,9 @@ fileUpload.addEventListener('change', async e => {
       throw new Error(detail);
     }
     const d = await r.json();
-    corpusFileInfo.textContent = `${file.name} — ${fmtBytes(d.bytes)} · Ready`;
+    activeCorpusBytes = d.bytes;
+    corpusFileInfo.textContent =
+      `${file.name} — ${fmtBytes(d.bytes)} · Ready${trainSizeNote(d.bytes)}`;
     corpusFileInfo.style.setProperty('color', 'var(--green)');
     refreshStatus();
   } catch (err) {
@@ -110,7 +123,8 @@ validUpload.addEventListener('change', async e => {
       throw new Error(detail);
     }
     const d = await r.json();
-    validFileInfo.textContent = `${file.name} — ${fmtBytes(d.bytes)} · Ready`;
+    validFileInfo.textContent =
+      `${file.name} — ${fmtBytes(d.bytes)} · Ready${trainSizeNote(d.bytes)}`;
     validFileInfo.style.setProperty('color', 'var(--green)');
     refreshStatus();
   } catch (err) {
@@ -138,7 +152,9 @@ setCorpusBtn.addEventListener('click', async () => {
       body: JSON.stringify({ text }),
     });
     if (!r.ok) { const e = await r.json(); throw new Error(e.detail); }
-    corpusFileInfo.textContent = `Pasted text — ${text.length.toLocaleString()} chars`;
+    activeCorpusBytes = text.length;
+    corpusFileInfo.textContent =
+      `Pasted text — ${text.length.toLocaleString()} chars${trainSizeNote(text.length)}`;
     corpusFileInfo.style.color = 'var(--green)';
     setCorpusBtn.textContent = '✓ Set';
     setTimeout(() => { setCorpusBtn.textContent = 'Set Corpus'; setCorpusBtn.disabled = false; }, 1500);
@@ -236,19 +252,42 @@ function setProgress(pct) {
   trainingPct.textContent = `${clamped.toFixed(0)}%`;
 }
 
-function appendTrainingLog(message) {
-  const ts = new Date().toLocaleTimeString();
-  const line = document.createElement('div');
-  line.className = 'training-log-line';
-  line.textContent = `${ts}  ${message}`;
-  trainingLog.appendChild(line);
-  trainingLog.scrollTop = trainingLog.scrollHeight;
+function setTrainingPhase(message) {
   trainingPhase.textContent = message;
 }
 
+function appendTrainingLog(message) {
+  const lines = trainingLog.querySelectorAll('.training-log-line');
+  const last = lines.length ? lines[lines.length - 1].textContent : '';
+  const stamped = `${new Date().toLocaleTimeString()}  ${message}`;
+  if (last === stamped) return;
+  const line = document.createElement('div');
+  line.className = 'training-log-line';
+  line.textContent = stamped;
+  trainingLog.appendChild(line);
+  trainingLog.scrollTop = trainingLog.scrollHeight;
+}
+
+let activeProgressKey = null;
+
 function setTrainingStatus(message, pct = null) {
+  if (pct != null) {
+    setTrainingPhase(
+      pct < 100 ? `${message} (${Math.round(pct)}%)` : message
+    );
+    setProgress(pct);
+    const key = message.replace(/\s+\(\d+%\)\s*$/, '').trim();
+    if (pct >= 100) {
+      if (activeProgressKey !== key) appendTrainingLog(message);
+      activeProgressKey = null;
+    } else {
+      activeProgressKey = key;
+    }
+    return;
+  }
+  activeProgressKey = null;
   appendTrainingLog(message);
-  if (pct != null) setProgress(pct);
+  setTrainingPhase(message);
 }
 
 function updateBatchChart(epoch, batch, totalBatches, loss) {
@@ -294,9 +333,6 @@ trainBtn.addEventListener('click', async () => {
     alert('Load a corpus first (upload a .txt file or paste text).'); return;
   }
 
-  const maxStepsEl = document.getElementById('cfg-max-steps');
-  const maxStepsVal = maxStepsEl ? parseInt(maxStepsEl.value) : 200;
-
   const cfg = {
     ctx_len:               parseInt(cfgCtx.value),
     n_layers:              parseInt(cfgLayers.value),
@@ -304,7 +340,6 @@ trainBtn.addEventListener('click', async () => {
     lr:                    parseFloat(document.getElementById('cfg-lr').value),
     batch_size:            parseInt(document.getElementById('cfg-batch').value),
     gen_every:             parseInt(document.getElementById('cfg-gen-every').value),
-    max_steps_per_epoch:   isNaN(maxStepsVal) ? null : maxStepsVal,
     corpus_text:           corpus || undefined,
   };
 
@@ -337,7 +372,8 @@ trainBtn.addEventListener('click', async () => {
   trainingIdle.classList.add('hidden');
   trainingActive.classList.remove('hidden');
   trainingLog.innerHTML = '';
-  trainingPhase.textContent = 'Starting…';
+  setTrainingPhase('Starting…');
+  activeProgressKey = null;
   setProgress(0);
   trainingEta.textContent = '';
   sampleCard.style.display = 'none';
@@ -347,7 +383,7 @@ trainBtn.addEventListener('click', async () => {
   statusBadge.textContent = 'Training…';
   initChart();
 
-  setTrainingStatus('Connecting to training stream…');
+  setTrainingPhase('Connecting to training stream…');
 
   // SSE stream
   let trainingDone = false;
@@ -360,7 +396,7 @@ trainBtn.addEventListener('click', async () => {
       setTrainingStatus(data.message, data.pct);
     } else if (data.type === 'heartbeat') {
       if (!trainingDone && !sawTrainingEvent) {
-        setTrainingStatus('Connected — waiting for first training update…');
+        setTrainingPhase('Connected — waiting for first training update…');
       }
     } else if (data.type === 'batch') {
       sawTrainingEvent = true;

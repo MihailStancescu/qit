@@ -147,7 +147,6 @@ def start_training(
     batch_size: int = 8,
     gen_every: int = 10,
     seed: int = 42,
-    max_steps_per_epoch: int | None = 200,
     valid_corpus_text: str | None = None,
     valid_path: Path | None = None,
 ) -> str:
@@ -168,7 +167,6 @@ def start_training(
         batch_size=batch_size,
         gen_every=gen_every,
         seed=seed,
-        max_steps_per_epoch=max_steps_per_epoch,
         corpus=None,   # we pass text directly below
         out_dir=str(MODEL_DIR),
         checkpoint_name=CHECKPOINT_PATH.name,
