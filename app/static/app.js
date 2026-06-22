@@ -74,64 +74,57 @@ function fmtBytes(b) {
   return `${(b / 1024 / 1024 / 1024).toFixed(2)} GB`;
 }
 
-// Train file: show name+size immediately from File API, then upload in background
-fileUpload.addEventListener('change', async e => {
+// Raw binary upload — avoids multipart body-parser limits on large (GB+) files.
+// XHR is used instead of fetch to get upload progress events.
+function uploadFile(file, endpoint, infoEl, onDone) {
+  infoEl.textContent = `${file.name} — ${fmtBytes(file.size)} · Uploading 0%`;
+  infoEl.style.setProperty('color', 'var(--muted)');
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', `${endpoint}?filename=${encodeURIComponent(file.name)}`);
+  xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+
+  xhr.upload.onprogress = ev => {
+    if (!ev.lengthComputable) return;
+    const pct = Math.round(100 * ev.loaded / ev.total);
+    infoEl.textContent = `${file.name} — ${fmtBytes(file.size)} · Uploading ${pct}%`;
+  };
+
+  xhr.onload = () => {
+    if (xhr.status >= 200 && xhr.status < 300) {
+      const d = JSON.parse(xhr.responseText);
+      infoEl.textContent = `${file.name} — ${fmtBytes(d.bytes)} · Ready`;
+      infoEl.style.setProperty('color', 'var(--green)');
+      onDone(null);
+    } else {
+      let msg = 'Upload failed';
+      try { msg = JSON.parse(xhr.responseText).detail || msg; } catch (_) {}
+      infoEl.textContent = `${file.name} · Error: ${msg}`;
+      infoEl.style.setProperty('color', 'var(--red)');
+      onDone(new Error(msg));
+    }
+  };
+
+  xhr.onerror = () => {
+    infoEl.textContent = `${file.name} · Network error`;
+    infoEl.style.setProperty('color', 'var(--red)');
+    onDone(new Error('Network error'));
+  };
+
+  xhr.send(file);
+}
+
+fileUpload.addEventListener('change', e => {
   const file = e.target.files[0];
   if (!file) return;
-  // Immediate feedback — no network needed to show filename and size
-  corpusFileInfo.textContent = `${file.name} — ${fmtBytes(file.size)} · Uploading…`;
-  corpusFileInfo.style.setProperty('color', 'var(--muted)');
-  // Yield to the browser so the DOM repaint happens before the fetch blocks
-  await new Promise(r => requestAnimationFrame(r));
-  const form = new FormData();
-  form.append('file', file);
-  try {
-    const r = await fetch('/api/corpus/upload', { method: 'POST', body: form });
-    if (!r.ok) {
-      let detail = 'Upload failed';
-      try { detail = (await r.json()).detail; } catch (_) {}
-      throw new Error(detail);
-    }
-    const d = await r.json();
-    activeCorpusBytes = d.bytes;
-    corpusFileInfo.textContent =
-      `${file.name} — ${fmtBytes(d.bytes)} · Ready${trainSizeNote(d.bytes)}`;
-    corpusFileInfo.style.setProperty('color', 'var(--green)');
-    refreshStatus();
-  } catch (err) {
-    corpusFileInfo.textContent = `${file.name} · Error: ${err.message}`;
-    corpusFileInfo.style.setProperty('color', 'var(--red)');
-    console.error('Corpus upload failed:', err);
-  }
+  uploadFile(file, '/api/corpus/upload', corpusFileInfo, err => { if (!err) refreshStatus(); });
   fileUpload.value = '';
 });
 
-// Validation file: same pattern — immediate feedback, then upload
-validUpload.addEventListener('change', async e => {
+validUpload.addEventListener('change', e => {
   const file = e.target.files[0];
   if (!file) return;
-  validFileInfo.textContent = `${file.name} — ${fmtBytes(file.size)} · Uploading…`;
-  validFileInfo.style.setProperty('color', 'var(--muted)');
-  await new Promise(r => requestAnimationFrame(r));
-  const form = new FormData();
-  form.append('file', file);
-  try {
-    const r = await fetch('/api/corpus/upload-valid', { method: 'POST', body: form });
-    if (!r.ok) {
-      let detail = 'Upload failed';
-      try { detail = (await r.json()).detail; } catch (_) {}
-      throw new Error(detail);
-    }
-    const d = await r.json();
-    validFileInfo.textContent =
-      `${file.name} — ${fmtBytes(d.bytes)} · Ready${trainSizeNote(d.bytes)}`;
-    validFileInfo.style.setProperty('color', 'var(--green)');
-    refreshStatus();
-  } catch (err) {
-    validFileInfo.textContent = `${file.name} · Error: ${err.message}`;
-    validFileInfo.style.setProperty('color', 'var(--red)');
-    console.error('Valid corpus upload failed:', err);
-  }
+  uploadFile(file, '/api/corpus/upload-valid', validFileInfo, err => { if (!err) refreshStatus(); });
   validUpload.value = '';
 });
 
@@ -304,11 +297,60 @@ function updateBatchChart(epoch, batch, totalBatches, loss) {
   }
 }
 
+// ── Quality rating helpers ────────────────────────────────────────────────────
+function lossQuality(v) {
+  if (v < 1.0) return ['Excellent',  'quality-excellent'];
+  if (v < 2.0) return ['Very Good',  'quality-very-good'];
+  if (v < 3.0) return ['Good',       'quality-good'];
+  if (v < 4.0) return ['Fair',       'quality-fair'];
+  if (v < 5.0) return ['Poor',       'quality-poor'];
+  return             ['Very Poor',   'quality-very-poor'];
+}
+function gapQuality(v) {
+  if (v < 0.10) return ['Excellent',        'quality-excellent'];
+  if (v < 0.30) return ['Very Good',        'quality-very-good'];
+  if (v < 0.50) return ['Acceptable',       'quality-good'];
+  if (v < 1.00) return ['Overfitting Risk', 'quality-fair'];
+  return               ['Severe Overfit',   'quality-very-poor'];
+}
+function pplQuality(v) {
+  if (v < 5)   return ['Excellent', 'quality-excellent'];
+  if (v < 10)  return ['Very Good', 'quality-very-good'];
+  if (v < 20)  return ['Good',      'quality-good'];
+  if (v < 50)  return ['Fair',      'quality-fair'];
+  if (v < 100) return ['Poor',      'quality-poor'];
+  return              ['Very Poor', 'quality-very-poor'];
+}
+function bpcQuality(v) {
+  if (v < 2.0) return ['Excellent', 'quality-excellent'];
+  if (v < 3.0) return ['Very Good', 'quality-very-good'];
+  if (v < 4.0) return ['Good',      'quality-good'];
+  if (v < 5.0) return ['Fair',      'quality-fair'];
+  if (v < 6.0) return ['Poor',      'quality-poor'];
+  return              ['Very Poor', 'quality-very-poor'];
+}
+function setQuality(id, label, cls) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = label;
+  el.className = 'metric-quality ' + cls;
+}
+
 function updateMetrics(d) {
   document.getElementById('m-train-loss').textContent = d.train_loss.toFixed(4);
   document.getElementById('m-val-loss').textContent   = d.val_loss.toFixed(4);
   document.getElementById('m-ppl').textContent        = d.val_ppl.toFixed(2);
   document.getElementById('m-bpc').textContent        = d.bpc.toFixed(3);
+
+  const gap = Math.abs(d.val_loss - d.train_loss);
+  document.getElementById('m-gap').textContent = gap.toFixed(4);
+
+  setQuality('q-train-loss', ...lossQuality(d.train_loss));
+  setQuality('q-val-loss',   ...lossQuality(d.val_loss));
+  setQuality('q-gap',        ...gapQuality(gap));
+  setQuality('q-ppl',        ...pplQuality(d.val_ppl));
+  setQuality('q-bpc',        ...bpcQuality(d.bpc));
+
   epochLabel.textContent = `Epoch ${d.epoch} / ${d.epochs || d.epoch}`;
   if (d.pct_overall != null) setProgress(d.pct_overall);
   if (d.eta_total_sec != null) {
@@ -333,6 +375,10 @@ trainBtn.addEventListener('click', async () => {
     alert('Load a corpus first (upload a .txt file or paste text).'); return;
   }
 
+  const maxStepsEl = document.getElementById('cfg-max-steps');
+  const maxStepsVal = maxStepsEl ? parseInt(maxStepsEl.value) : 200;
+
+  const normalizeEl = document.getElementById('cfg-normalize');
   const cfg = {
     ctx_len:               parseInt(cfgCtx.value),
     n_layers:              parseInt(cfgLayers.value),
@@ -340,6 +386,8 @@ trainBtn.addEventListener('click', async () => {
     lr:                    parseFloat(document.getElementById('cfg-lr').value),
     batch_size:            parseInt(document.getElementById('cfg-batch').value),
     gen_every:             parseInt(document.getElementById('cfg-gen-every').value),
+    max_steps_per_epoch:   isNaN(maxStepsVal) ? null : maxStepsVal,
+    normalize:             normalizeEl ? normalizeEl.checked : true,
     corpus_text:           corpus || undefined,
   };
 
@@ -404,6 +452,7 @@ trainBtn.addEventListener('click', async () => {
         `Epoch ${data.epoch}/${data.epochs || '?'}  —  batch ${data.batch} / ${data.total_batches}`;
       document.getElementById('m-train-loss').textContent =
         data.running_loss.toFixed(4);
+      setQuality('q-train-loss', ...lossQuality(data.running_loss));
       if (data.pct != null) setProgress(data.pct_overall ?? data.pct);
       if (data.eta_epoch_sec != null) {
         trainingEta.textContent =
@@ -505,7 +554,7 @@ clearChatBtn.addEventListener('click', () => {
     <div class="chat-welcome">
       <div class="welcome-icon">⚛</div>
       <h3>Ask about your corpus</h3>
-      <p class="muted">Train a model in QIT Studio, then ask questions here. Claude answers using passages retrieved from your text, re-ranked by the quantum model when available.</p>
+      <p class="muted">Train a model in QIT Studio, then ask questions here. The quantum model re-ranks retrieved passages by perplexity. Add a Claude API key for generated answers.</p>
     </div>`;
 });
 
@@ -521,36 +570,118 @@ chatInput.addEventListener('keydown', e => {
 });
 chatSendBtn.addEventListener('click', sendMessage);
 
-function appendMessage(role, text, sources, qitPpls, method) {
-  // Remove welcome screen if present
+// appendMessage: role='user' → data is a string.
+//               role='assistant' → data is the /api/qa response object.
+function appendMessage(role, data) {
   chatHistory.querySelector('.chat-welcome')?.remove();
 
   const msg = document.createElement('div');
   msg.className = `chat-msg ${role}`;
 
-  const bubble = document.createElement('div');
-  bubble.className = 'bubble';
-  bubble.textContent = text;
-  msg.appendChild(bubble);
+  // Plain string (user messages, inline errors)
+  if (typeof data === 'string') {
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = data;
+    msg.appendChild(bubble);
+    chatHistory.appendChild(msg);
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+    return msg;
+  }
 
-  if (role === 'assistant' && sources && sources.length) {
-    const sourcesRow = document.createElement('div');
-    sourcesRow.className = 'sources-row';
+  const { answer, passages, qit_confidences, method } = data;
+  const methodLabel = method === 'tfidf+qit' ? '⚛ QIT+TF-IDF' : '🔍 TF-IDF';
 
-    const methodSpan = document.createElement('span');
-    methodSpan.className = 'method-label';
-    methodSpan.textContent = method === 'tfidf+qit' ? '⚛ QIT+TF-IDF' : '🔍 TF-IDF';
-    sourcesRow.appendChild(methodSpan);
+  if (answer) {
+    // With Claude: prose answer bubble + compact source chips
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = answer;
+    msg.appendChild(bubble);
 
-    sources.forEach((s, i) => {
-      const chip = document.createElement('div');
-      chip.className = 'source-chip';
-      const pplLabel = qitPpls && qitPpls[i] ? ` · ppl ${qitPpls[i]}` : '';
-      chip.textContent = s.slice(0, 60) + '…' + pplLabel;
-      chip.title = s;
-      sourcesRow.appendChild(chip);
+    if (passages && passages.length) {
+      const sourcesRow = document.createElement('div');
+      sourcesRow.className = 'sources-row';
+
+      const methodSpan = document.createElement('span');
+      methodSpan.className = 'method-label';
+      methodSpan.textContent = methodLabel;
+      sourcesRow.appendChild(methodSpan);
+
+      passages.forEach((s, i) => {
+        const chip = document.createElement('div');
+        chip.className = 'source-chip';
+        const conf = qit_confidences && qit_confidences[i] != null ? ` · ${qit_confidences[i]}% in-domain` : '';
+        chip.textContent = s.slice(0, 60) + '…' + conf;
+        chip.title = s;
+        sourcesRow.appendChild(chip);
+      });
+      msg.appendChild(sourcesRow);
+    }
+
+  } else if (passages && passages.length) {
+    // Without Claude: passage cards with QIT confidence bars
+    const cards = document.createElement('div');
+    cards.className = 'passage-cards';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'passage-cards-header';
+    hdr.innerHTML = `<span class="method-label">${methodLabel}</span><span class="muted small"> — ranked by quantum perplexity</span>`;
+    cards.appendChild(hdr);
+
+    passages.forEach((p, i) => {
+      const conf = qit_confidences && qit_confidences[i] != null ? qit_confidences[i] : null;
+
+      const card = document.createElement('div');
+      card.className = 'passage-card';
+
+      const cardHdr = document.createElement('div');
+      cardHdr.className = 'passage-card-header';
+
+      const rank = document.createElement('span');
+      rank.className = 'passage-rank';
+      rank.textContent = `#${i + 1}`;
+      cardHdr.appendChild(rank);
+
+      if (conf !== null) {
+        const barWrap = document.createElement('div');
+        barWrap.className = 'qit-bar-wrap';
+        const track = document.createElement('div');
+        track.className = 'qit-bar-track';
+        const bar = document.createElement('div');
+        bar.className = 'qit-bar';
+        bar.style.width = conf + '%';
+        track.appendChild(bar);
+        barWrap.appendChild(track);
+        const scoreSpan = document.createElement('span');
+        scoreSpan.className = 'qit-score';
+        scoreSpan.textContent = conf + '% in-domain';
+        barWrap.appendChild(scoreSpan);
+        cardHdr.appendChild(barWrap);
+      }
+
+      card.appendChild(cardHdr);
+
+      const text = document.createElement('div');
+      text.className = 'passage-text';
+      text.textContent = p;
+      card.appendChild(text);
+
+      cards.appendChild(card);
     });
-    msg.appendChild(sourcesRow);
+
+    const footer = document.createElement('div');
+    footer.className = 'passage-footer';
+    footer.textContent = 'Add a Claude API key for AI-generated answers.';
+    cards.appendChild(footer);
+
+    msg.appendChild(cards);
+
+  } else {
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = 'No relevant passages found. Make sure a corpus is loaded and a model is trained.';
+    msg.appendChild(bubble);
   }
 
   chatHistory.appendChild(msg);
@@ -598,7 +729,7 @@ async function sendMessage() {
     if (!r.ok) {
       appendMessage('assistant', `Error: ${data.detail || 'Unknown error'}`);
     } else {
-      appendMessage('assistant', data.answer, data.passages, data.qit_ppls, data.method);
+      appendMessage('assistant', data);
     }
   } catch (err) {
     thinkingMsg.remove();

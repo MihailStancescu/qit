@@ -1,11 +1,17 @@
 """
-QIT Chat pipeline: TF-IDF retrieval → QIT-LM re-ranking → Claude answer.
+QIT Chat pipeline: TF-IDF retrieval → QIT-LM re-ranking → (optional) Claude answer.
 
-Requires ANTHROPIC_API_KEY in environment or passed explicitly at call time.
+Without a Claude API key the pipeline still runs fully:
+  1. TF-IDF finds the most lexically relevant passages
+  2. QIT-LM re-ranks them by perplexity (lower = more in-distribution)
+  3. Passages + confidence scores are returned directly
+
+With a Claude API key step 3 also generates a prose answer from those passages.
 """
 
 from __future__ import annotations
 
+import math
 import os
 
 import anthropic
@@ -20,6 +26,20 @@ say so clearly rather than speculating. Keep answers concise and grounded in the
 """
 
 
+def _ppls_to_confidence(ppls: list[float]) -> list[float]:
+    """Convert perplexity scores to 0–100 confidence values (higher = more in-domain)."""
+    if not ppls:
+        return []
+    finite = [p for p in ppls if math.isfinite(p) and p > 0]
+    if not finite:
+        return [0.0] * len(ppls)
+    min_ppl = min(finite)
+    return [
+        round(100.0 * min_ppl / p, 1) if (math.isfinite(p) and p > 0) else 0.0
+        for p in ppls
+    ]
+
+
 def answer(
     question: str,
     corpus_text: str,
@@ -30,32 +50,25 @@ def answer(
     max_tokens: int = 1024,
 ) -> dict:
     """
-    Full RAG pipeline.
+    Full retrieval pipeline. Claude answer is optional.
 
     Returns:
         {
-          "answer":   str,
-          "passages": list[str],        # top passages used as context
-          "qit_ppls": list[float],      # QIT perplexity per passage (if available)
-          "method":   str,              # "tfidf" or "tfidf+qit"
+          "answer":           str | None,   # Claude's prose answer, or None
+          "passages":         list[str],
+          "qit_ppls":         list[float],
+          "qit_confidences":  list[float],  # 0-100, derived from ppls
+          "method":           str,          # "tfidf" | "tfidf+qit"
         }
     """
-    key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
-    if not key:
-        return {
-            "answer": "⚠️ No Anthropic API key configured. Set ANTHROPIC_API_KEY or enter it in the chat panel.",
-            "passages": [],
-            "qit_ppls": [],
-            "method": "none",
-        }
-
     # 1. Chunk corpus
     chunks = chunk_text(corpus_text, chunk_size=300, overlap=80)
     if not chunks:
         return {
-            "answer": "Corpus is empty. Upload a text file in QIT Studio first.",
+            "answer": None,
             "passages": [],
             "qit_ppls": [],
+            "qit_confidences": [],
             "method": "none",
         }
 
@@ -73,34 +86,41 @@ def answer(
             qit_ppls = [round(ppl, 2) for _, ppl, _ in reranked]
             method = "tfidf+qit"
         except Exception:
-            # Fall back gracefully if QIT scoring fails
             passages = [p for _, p in tfidf_hits[:3]]
             method = "tfidf"
     else:
         passages = [p for _, p in tfidf_hits[:3]]
         method = "tfidf"
 
-    # 4. Claude API call
-    context_block = "\n\n---\n\n".join(
-        f"[Passage {i+1}]\n{p}" for i, p in enumerate(passages)
-    )
-    user_message = (
-        f"Context from the text:\n\n{context_block}\n\n"
-        f"Question: {question}"
-    )
+    confidences = _ppls_to_confidence(qit_ppls)
 
-    client = anthropic.Anthropic(api_key=key)
-    response = client.messages.create(
-        model=claude_model,
-        max_tokens=max_tokens,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_message}],
-    )
-    answer_text = response.content[0].text
+    # 4. Claude answer (optional)
+    answer_text: str | None = None
+    key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
+    if key:
+        context_block = "\n\n---\n\n".join(
+            f"[Passage {i+1}]\n{p}" for i, p in enumerate(passages)
+        )
+        user_message = (
+            f"Context from the text:\n\n{context_block}\n\n"
+            f"Question: {question}"
+        )
+        try:
+            client = anthropic.Anthropic(api_key=key)
+            response = client.messages.create(
+                model=claude_model,
+                max_tokens=max_tokens,
+                system=SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": user_message}],
+            )
+            answer_text = response.content[0].text
+        except Exception as exc:
+            answer_text = f"⚠️ Claude API error: {exc}"
 
     return {
-        "answer":   answer_text,
-        "passages": passages,
-        "qit_ppls": qit_ppls,
-        "method":   method,
+        "answer":          answer_text,
+        "passages":        passages,
+        "qit_ppls":        qit_ppls,
+        "qit_confidences": confidences,
+        "method":          method,
     }

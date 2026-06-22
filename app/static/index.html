@@ -104,6 +104,12 @@
               <input type="number" id="cfg-gen-every" value="10" min="1" max="50" />
             </label>
           </div>
+          <div class="config-normalize">
+            <label class="toggle-label">
+              <input type="checkbox" id="cfg-normalize" checked />
+              <span class="toggle-text">Normalize corpus <span class="muted small">(lowercase · strip non-ASCII · reduces vocab)</span></span>
+            </label>
+          </div>
           <div class="config-footer">
             <span id="qubits-label" class="muted">Total qubits: 12</span>
             <button id="train-btn" class="btn btn-primary">▶ Train</button>
@@ -137,18 +143,27 @@
               <div class="metric">
                 <span class="metric-label">Train loss</span>
                 <span id="m-train-loss" class="metric-val">–</span>
+                <span id="q-train-loss" class="metric-quality"></span>
               </div>
               <div class="metric">
                 <span class="metric-label">Val loss</span>
                 <span id="m-val-loss" class="metric-val">–</span>
+                <span id="q-val-loss" class="metric-quality"></span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Gap</span>
+                <span id="m-gap" class="metric-val">–</span>
+                <span id="q-gap" class="metric-quality"></span>
               </div>
               <div class="metric">
                 <span class="metric-label">Perplexity</span>
                 <span id="m-ppl" class="metric-val">–</span>
+                <span id="q-ppl" class="metric-quality"></span>
               </div>
               <div class="metric">
                 <span class="metric-label">BPC</span>
                 <span id="m-bpc" class="metric-val">–</span>
+                <span id="q-bpc" class="metric-quality"></span>
               </div>
             </div>
             <div class="chart-wrap">
@@ -221,11 +236,11 @@
         </div>
 
         <div class="card">
-          <div class="card-header"><h2>Retrieval</h2></div>
+          <div class="card-header"><h2>How it works</h2></div>
           <div class="retrieval-info muted small">
-            <p><strong>Step 1:</strong> TF-IDF ranks the top 6 passages from your corpus.</p>
-            <p><strong>Step 2:</strong> QIT-LM perplexity re-ranks them — lower perplexity means more in-distribution with the training text.</p>
-            <p><strong>Step 3:</strong> Claude answers using the top 3 passages as context.</p>
+            <p><strong>Step 1:</strong> TF-IDF finds the top 6 relevant passages from your corpus.</p>
+            <p><strong>Step 2 (quantum):</strong> QIT-LM re-ranks by perplexity — passages more in-distribution with the training text rank higher.</p>
+            <p><strong>Step 3 (optional):</strong> Claude generates a prose answer from the top passages. Without an API key, the ranked passages are returned directly.</p>
             <p id="qit-status-note" class="pill pill-yellow" style="display:inline-block;margin-top:6px">
               No QIT model — using TF-IDF only
             </p>

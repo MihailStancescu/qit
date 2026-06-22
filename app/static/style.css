@@ -210,6 +210,20 @@ body {
   transition: border-color .15s;
 }
 .config-grid input:focus { border-color: var(--accent); }
+.config-normalize {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border2);
+}
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--fg);
+}
+.toggle-label input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
 .config-footer {
   display: flex;
   align-items: center;
@@ -220,7 +234,7 @@ body {
 /* Metrics */
 .metrics-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 8px;
   margin-bottom: 14px;
 }
@@ -233,6 +247,22 @@ body {
 }
 .metric-label { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
 .metric-val { display: block; font-size: 18px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.metric-quality {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .2px;
+  min-height: 16px;
+}
+.quality-excellent  { background: rgba(63,185,80,.15);  color: #3fb950; border: 1px solid rgba(63,185,80,.3); }
+.quality-very-good  { background: rgba(34,211,238,.12); color: #22d3ee; border: 1px solid rgba(34,211,238,.25); }
+.quality-good       { background: rgba(124,58,237,.2);  color: #a78bfa; border: 1px solid rgba(124,58,237,.35); }
+.quality-fair       { background: rgba(210,153,34,.15); color: #d29922; border: 1px solid rgba(210,153,34,.3); }
+.quality-poor       { background: rgba(249,115,22,.12); color: #f97316; border: 1px solid rgba(249,115,22,.25); }
+.quality-very-poor  { background: rgba(248,81,73,.15);  color: #f85149; border: 1px solid rgba(248,81,73,.3); }
 
 .chart-wrap { position: relative; height: 200px; }
 
@@ -472,6 +502,75 @@ body {
   font-size: 10px;
   color: var(--muted);
   padding: 0 2px;
+}
+
+/* Passage cards — QIT Chat without Claude */
+.passage-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 560px;
+}
+.passage-cards-header {
+  font-size: 11px;
+  padding: 0 2px 2px;
+}
+.passage-card {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.passage-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.passage-rank {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  min-width: 22px;
+}
+.qit-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+.qit-bar-track {
+  flex: 1;
+  height: 4px;
+  background: var(--border2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.qit-bar {
+  height: 4px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+.qit-score {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.passage-text {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.55;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+.passage-footer {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 2px 0 0;
 }
 
 /* Thinking indicator */
