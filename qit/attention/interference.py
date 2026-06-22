@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 import math
-import os
-import threading
-from concurrent.futures import ThreadPoolExecutor
 
 import pennylane as qml
 import torch
@@ -13,10 +10,6 @@ from qit.backend import get_backend
 from qit.encoding.angle import angle_encode
 from qit.layers.entangle import u_entangle
 from qit.layers.mix import u_mix
-
-# Thread-local storage: each worker thread gets its own QNode instance so
-# lightning.qubit's internal C++ state vector is never shared across threads.
-_thread_local = threading.local()
 
 
 class QuantumInterferenceAttention(nn.Module):
@@ -31,7 +24,8 @@ class QuantumInterferenceAttention(nn.Module):
     produced by the learned unitary U_attention.
 
     Default QIT-0 configuration:
-        n_tokens=4, n_qubits_per_token=2, n_layers=2 → 56 trainable parameters
+        n_tokens=4, n_qubits_per_token=2, n_layers=2 → 56 quantum parameters (attention + mix)
+        Full QIT-0 model adds embedding (4) + decoder (18) = 78 total parameters
     """
 
     def __init__(
@@ -42,7 +36,7 @@ class QuantumInterferenceAttention(nn.Module):
         backend: str | None = None,
         diff_method: str | None = None,
         entangle_topology: str = "ring",
-        n_workers: int | None = None,
+        n_workers: int | None = None,  # kept for API compatibility; unused
     ):
         super().__init__()
         self.n_tokens = n_tokens
@@ -54,8 +48,6 @@ class QuantumInterferenceAttention(nn.Module):
         detected_backend, detected_diff = get_backend()
         self._backend = backend or detected_backend
         self._diff_method = diff_method or detected_diff
-        # Max parallel workers: one per batch item, capped at CPU count.
-        self._n_workers = n_workers or (os.cpu_count() or 4)
 
         # Trainable parameters registered directly with PyTorch.
         # Uniform init over [-π, π] covers the full rotation space.
@@ -66,14 +58,12 @@ class QuantumInterferenceAttention(nn.Module):
             torch.empty(1, self.n_qubits).uniform_(-math.pi, math.pi)
         )
 
-        # Build the main-thread QNode (used during training where autograd must
-        # remain on a single, stable device instance).
         self._circuit = self._build_circuit()
 
     # ── QNode factory ─────────────────────────────────────────────────────────
 
     def _build_circuit(self):
-        """Create a fresh (device, QNode) pair — called once per thread."""
+        """Create a (device, QNode) pair bound to the calling thread."""
         n_tokens = self.n_tokens
         n_qubits = self.n_qubits
         n_qubits_per_token = self.n_qubits_per_token
@@ -106,15 +96,6 @@ class QuantumInterferenceAttention(nn.Module):
 
         return _circuit
 
-    def _get_thread_circuit(self):
-        """Return (or lazily create) this thread's own QNode instance."""
-        if not hasattr(_thread_local, "circuits"):
-            _thread_local.circuits = {}
-        key = id(self)      # separate circuit per attention module instance
-        if key not in _thread_local.circuits:
-            _thread_local.circuits[key] = self._build_circuit()
-        return _thread_local.circuits[key]
-
     # ── forward ───────────────────────────────────────────────────────────────
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -124,32 +105,13 @@ class QuantumInterferenceAttention(nn.Module):
         Returns:
             (batch, n_qubits) — Pauli-Z expectation values in [-1, 1]
         """
-        batch_size = x.shape[0]
-
-        if not torch.is_grad_enabled() and batch_size > 1:
-            # ── Inference path: parallel batch ────────────────────────────────
-            # No autograd tape → each thread's QNode is fully independent.
-            # Reading shared parameter tensors (weights_*) in parallel is
-            # safe; PyTorch Parameters are immutable during forward inference.
-            wa = self.weights_attention.detach()
-            wm = self.weights_mix.detach()
-
-            def _eval_one(xi):
-                circuit = self._get_thread_circuit()
-                out = circuit(xi.detach(), wa, wm)
-                return torch.stack(list(out))
-
-            n_workers = min(batch_size, self._n_workers)
-            with ThreadPoolExecutor(max_workers=n_workers) as pool:
-                batch_results = list(pool.map(_eval_one, x))
-        else:
-            # ── Training path: serial, single stable QNode ────────────────────
-            # autograd (adjoint or parameter-shift) requires a single device
-            # instance whose state persists across the forward+backward pair.
-            batch_results = []
-            for xi in x:
-                out = self._circuit(xi, self.weights_attention, self.weights_mix)
-                batch_results.append(torch.stack(list(out)))
+        # Serial execution: lightning.qubit already parallelises via BLAS internally.
+        # A previous per-batch ThreadPoolExecutor caused intermittent C++ deadlocks
+        # when multiple threads initialised lightning.qubit devices concurrently.
+        batch_results = []
+        for xi in x:
+            out = self._circuit(xi, self.weights_attention, self.weights_mix)
+            batch_results.append(torch.stack(list(out)))
 
         return torch.stack(batch_results)
 

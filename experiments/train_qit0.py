@@ -19,7 +19,7 @@ import torch.nn as nn
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from qit import QIT
-from tasks.parity import make_full_parity_loaders, make_parity_loaders
+from tasks.parity import make_full_parity_loaders, make_memorization_loaders, make_parity_loaders
 
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -36,16 +36,18 @@ class Config:
     # Training
     epochs: int = 40
     lr: float = 0.05
-    target_acc: float = 0.95   # stop early when both train & test reach this
+    target_acc: float = 0.99   # stop early when both train & test reach this
 
     # Data
-    # full_dataset=True: enumerate all 16 parity inputs (best for convergence check)
-    # full_dataset=False: use sampled train/test split (better for learning curves)
-    full_dataset: bool = True
+    # memorization=True (default): all 16 inputs in both train and test — paper protocol
+    # full_dataset=True: enumerate all 16 inputs in 80/20 train/test split
+    # (both False): sampled draws with replacement
+    memorization: bool = True
+    full_dataset: bool = False
     train_size: int = 200
     test_size: int = 64
     batch_size: int = 8
-    seed: int = 42
+    seed: int = 7
 
     # Output
     results_dir: str = "results"
@@ -70,7 +72,12 @@ def evaluate(model: QIT, loader, loss_fn) -> tuple[float, float]:
 
 def train(cfg: Config) -> tuple[QIT, dict]:
     # Data
-    if cfg.full_dataset:
+    if cfg.memorization:
+        train_loader, test_loader = make_memorization_loaders(
+            n_tokens=cfg.n_tokens,
+            batch_size=cfg.batch_size,
+        )
+    elif cfg.full_dataset:
         train_loader, test_loader = make_full_parity_loaders(
             n_tokens=cfg.n_tokens,
             batch_size=cfg.batch_size,
@@ -85,7 +92,8 @@ def train(cfg: Config) -> tuple[QIT, dict]:
             seed=cfg.seed,
         )
 
-    # Model
+    # Model — seed before construction for reproducible weight init
+    torch.manual_seed(cfg.seed)
     model = QIT(
         vocab_size=cfg.vocab_size,
         n_classes=cfg.n_classes,
@@ -227,7 +235,8 @@ def main() -> None:
     cfg = Config()
 
     dataset_desc = (
-        "full enumeration (16 inputs)" if cfg.full_dataset
+        "memorization (all 16 in train+test)" if cfg.memorization
+        else "full enumeration (16 inputs, 80/20 split)" if cfg.full_dataset
         else f"sampled  train={cfg.train_size}  test={cfg.test_size}"
     )
 
