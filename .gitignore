@@ -41,8 +41,7 @@ desktop.ini
 *~
 
 # Cursor / Claude local config
-# Let's keep the Claude local config, it's useful for the paper.
-# .claude/
+.claude/
 
 # Paper drafts, LaTeX sources, and build artifacts (kept locally, not public)
 paper/
