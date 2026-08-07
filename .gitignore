@@ -44,16 +44,8 @@ desktop.ini
 # Let's keep the Claude local config, it's useful for the paper.
 # .claude/
 
-# LaTeX build artifacts (keep .tex, .bib, .pdf)
-paper/*.aux
-paper/*.bbl
-paper/*.blg
-paper/*.log
-paper/*.out
-paper/*.toc
-paper/*.synctex.gz
-paper/*.fdb_latexmk
-paper/*.fls
+# Paper drafts, LaTeX sources, and build artifacts (kept locally, not public)
+paper/
 
 # Training data (large corpora — download locally)
 train_data/
