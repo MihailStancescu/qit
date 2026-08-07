@@ -1,10 +1,13 @@
 # Quantum Interference Transformer (QIT)
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21831269.svg)](https://doi.org/10.5281/zenodo.21831269)
+
 A fully quantum sequence architecture where attention emerges from amplitude interference and entanglement rather than classical dot-product similarity.
 
 > **Central claim:** sequence intelligence can emerge from interference dynamics instead of classical attention matrices.
 
-**Status:** QIT-0 prototype — parity task benchmark complete.
+**Status:** QIT-0 prototype — working paper published.  
+**Paper:** [doi.org/10.5281/zenodo.21831269](https://doi.org/10.5281/zenodo.21831269)
 
 ---
 
@@ -12,24 +15,23 @@ A fully quantum sequence architecture where attention emerges from amplitude int
 
 | Document | Description |
 |----------|-------------|
-| [Research Paper Draft](paper/QIT_paper_draft.md) | Full academic paper: architecture, experiments, results, future work |
-| [Software Engineer's Guide](paper/QIT_engineer_guide.md) | Quantum computing explained through programming analogies — from qubits to the full circuit |
-| [Blueprint](QIT_Research_Blueprint.md) | Original research concept and 30-day roadmap |
+| [Working paper (Zenodo)](https://doi.org/10.5281/zenodo.21831269) | Architecture, experiments, ablations, and limitations |
+| [Blueprint](QIT_Research_Blueprint.md) | Original research concept and roadmap |
 
 ---
 
 ## Results at a Glance
 
-Benchmark: 4-bit parity task, all 16 inputs, Adam lr=0.05.
+Benchmark: 4-bit parity memorisation (all 16 inputs), Adam lr=0.05, **5 random seeds**. Full details in the [working paper](https://doi.org/10.5281/zenodo.21831269).
 
-| Model | Params | Epochs to 99% | ms / epoch |
-|-------|--------|---------------|------------|
-| **QIT-0** | **78** | **3** | 188 ms (simulator) |
-| MLP | 94 | 36 | 0.7 ms |
-| GRU | 110 | 53 | 1.1 ms |
-| Transformer | 206 | 175 | 2.2 ms |
+| Model | Params | Conv. epochs (mean±std) | Seeds converging |
+|-------|--------|-------------------------|------------------|
+| **QIT-0** | **78** | **6.2±1.7** | **5/5** |
+| MLP | 94 | 31.7±4.1 | 3/5 |
+| GRU | 110 | 34.5±5.5 | 2/5 |
+| Transformer | 206 | DNF (200 ep.) | 0/5 |
 
-QIT-0 converges **12–58× faster** with fewer parameters than any baseline. The per-epoch overhead is the cost of classical simulation of 2⁸ = 256 quantum amplitudes, not a property of the algorithm.
+QIT-0 is the only model that converges reliably on this protocol. Per-epoch wall-clock is higher under classical simulation of the quantum circuit; see the paper for timing and caveats.
 
 ---
 
