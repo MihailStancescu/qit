@@ -114,10 +114,21 @@ def make_charlm_loaders(
     valid_path=None,
     status_callback=None,
     progress_callback=None,
+    max_train_samples: int | None = None,
 ) -> tuple[DataLoader, DataLoader, CharVocab]:
     from pathlib import Path
 
     from app.corpus_cache import get_or_encode_file, get_or_encode_text, get_or_encode_with_vocab
+
+    def _make_train_loader(src_ds) -> DataLoader:
+        # For very large datasets shuffle=True would call torch.randperm(N) which
+        # allocates O(N*8) bytes (16 GB for a 2B-window corpus). Instead, pre-sample
+        # max_train_samples indices via numpy, which is O(max_train_samples).
+        if max_train_samples is not None and len(src_ds) > max_train_samples:
+            rng = np.random.default_rng(seed)
+            idx = rng.integers(0, len(src_ds), size=max_train_samples)
+            src_ds = Subset(src_ds, idx.tolist())
+        return DataLoader(src_ds, batch_size=batch_size, shuffle=True)
 
     def _status(msg: str, pct: float | None = None) -> None:
         if status_callback:
@@ -176,12 +187,7 @@ def make_charlm_loaders(
             f"Validation split: last {n_val:,} windows ({100 - train_frac * 100:.0f}% of train)",
             100,
         )
-        train_loader = DataLoader(
-            Subset(train_ds, range(n_train)),
-            batch_size=batch_size,
-            shuffle=True,
-            num_workers=0,
-        )
+        train_loader = _make_train_loader(Subset(train_ds, range(n_train)))
         val_loader = DataLoader(
             Subset(train_ds, range(n_train, n_train + n_val)),
             batch_size=batch_size,
@@ -192,9 +198,7 @@ def make_charlm_loaders(
         return train_loader, val_loader, vocab
 
     _status(f"Validation set: {len(val_ds):,} windows", 100)
-    train_loader = DataLoader(
-        train_ds, batch_size=batch_size, shuffle=True, num_workers=0
-    )
+    train_loader = _make_train_loader(train_ds)
     val_loader = DataLoader(
         val_ds, batch_size=batch_size, shuffle=False, num_workers=0
     )

@@ -30,7 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -87,19 +87,18 @@ async def set_corpus_text(body: TextBody):
 
 
 @app.post("/api/corpus/upload")
-async def upload_corpus(file: UploadFile = File(...)):
+async def upload_corpus(
+    request: Request,
+    filename: str = Query(default="corpus.txt"),
+):
     """
-    Stream the uploaded file straight to disk — never holds GB content in RAM.
-    The file path is stored in STATE; training and Q&A read from it lazily.
+    Raw binary streaming upload — avoids multipart body-parser limits.
+    Client sends body=<File> with Content-Type: application/octet-stream.
     """
     dest = UPLOAD_DIR / f"corpus_{uuid.uuid4().hex}.txt"
-    await file.seek(0)
-
-    def _copy():
-        with dest.open("wb") as out:
-            shutil.copyfileobj(file.file, out)
-
-    await run_in_threadpool(_copy)
+    with dest.open("wb") as out:
+        async for chunk in request.stream():
+            out.write(chunk)
 
     size = dest.stat().st_size
     if size < 50:
@@ -107,21 +106,20 @@ async def upload_corpus(file: UploadFile = File(...)):
         raise HTTPException(400, "File too short (need at least 50 characters).")
 
     STATE.corpus_path = dest
-    STATE.active_corpus = None      # file upload overrides any paste
-    return {"ok": True, "filename": file.filename, "bytes": size}
+    STATE.active_corpus = None
+    return {"ok": True, "filename": filename, "bytes": size}
 
 
 @app.post("/api/corpus/upload-valid")
-async def upload_valid_corpus(file: UploadFile = File(...)):
-    """Stream a .valid.txt validation file to disk."""
+async def upload_valid_corpus(
+    request: Request,
+    filename: str = Query(default="valid.txt"),
+):
+    """Raw binary streaming upload for the validation corpus."""
     dest = UPLOAD_DIR / f"valid_{uuid.uuid4().hex}.txt"
-    await file.seek(0)
-
-    def _copy():
-        with dest.open("wb") as out:
-            shutil.copyfileobj(file.file, out)
-
-    await run_in_threadpool(_copy)
+    with dest.open("wb") as out:
+        async for chunk in request.stream():
+            out.write(chunk)
 
     size = dest.stat().st_size
     if size < 10:
@@ -130,7 +128,7 @@ async def upload_valid_corpus(file: UploadFile = File(...)):
 
     STATE.valid_path = dest
     STATE.valid_corpus = None
-    return {"ok": True, "filename": file.filename, "bytes": size}
+    return {"ok": True, "filename": filename, "bytes": size}
 
 
 # ── Training endpoints ────────────────────────────────────────────────────────
@@ -144,6 +142,9 @@ class TrainRequest(BaseModel):
     batch_size: int = 8
     gen_every: int = 10
     seed: int = 42
+    max_steps_per_epoch: int | None = 200   # None = unlimited (slow for large corpora)
+    max_val_steps: int | None = 20          # cap validation batches per epoch
+    normalize: bool = True                  # lowercase + strip non-ASCII before encoding
     corpus_text: str | None = None          # optional inline corpus; else uses active corpus
 
 
@@ -193,6 +194,9 @@ async def start_train(req: TrainRequest):
         batch_size=req.batch_size,
         gen_every=req.gen_every,
         seed=req.seed,
+        max_steps_per_epoch=req.max_steps_per_epoch,
+        max_val_steps=req.max_val_steps,
+        normalize=req.normalize,
         valid_corpus_text=valid_text,
         valid_path=valid_path,
     )

@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from qit.lm_model import QITLM
 from qit.backend import get_backend
 from tasks.charlm import CharVocab, make_charlm_loaders
+from tasks.normalize import normalize_corpus
 
 
 def _emit_status(status_callback, message: str, pct: float | None = None) -> None:
@@ -47,6 +48,9 @@ class Config:
     epochs: int = 60
     lr: float = 0.05
     batch_size: int = 8
+    max_steps_per_epoch: int | None = None  # None = use all batches
+    max_val_steps: int | None = 20          # cap validation batches (quantum eval can be slow)
+
     # Data
     corpus: str | None = None       # path to .txt file; None = built-in demo corpus
     valid_corpus: str | None = None # path to separate .valid.txt; overrides train_frac split
@@ -59,6 +63,9 @@ class Config:
     gen_temperature: float = 0.8
     gen_top_k: int = 5
     gen_seed: str = "the "        # prompt seed for sample generation
+
+    # Preprocessing
+    normalize: bool = True  # lowercase + strip non-ASCII → reduces vocab 200+ → ~35 chars
 
     # Output
     out_dir: str = "results"
@@ -106,6 +113,37 @@ def train(
     if valid_path is None and cfg.valid_corpus is not None:
         valid_path = Path(cfg.valid_corpus)
 
+    if cfg.normalize:
+        # Normalize to reduce vocabulary before encoding. This converts
+        # corpus_path → in-memory text so normalization happens in one pass.
+        if corpus_path is not None:
+            raw = corpus_path.read_text(encoding="utf-8", errors="replace")
+            corpus_text = normalize_corpus(raw)
+            corpus_path = None
+            _emit_status(
+                status_callback,
+                f"Normalized corpus: {len(raw):,} → {len(corpus_text):,} chars, "
+                f"vocab {len(set(raw))} → {len(set(corpus_text))} unique chars",
+                0,
+            )
+        elif corpus_text is not None:
+            raw = corpus_text
+            corpus_text = normalize_corpus(raw)
+            _emit_status(
+                status_callback,
+                f"Normalized corpus: {len(raw):,} → {len(corpus_text):,} chars, "
+                f"vocab {len(set(raw))} → {len(set(corpus_text))} unique chars",
+                0,
+            )
+        if valid_path is not None:
+            valid_text = normalize_corpus(
+                valid_path.read_text(encoding="utf-8", errors="replace"),
+                min_char_freq=0,
+            )
+            valid_path = None
+        elif valid_text is not None:
+            valid_text = normalize_corpus(valid_text, min_char_freq=0)
+
     if corpus_path is not None:
         _emit_status(status_callback, f"Preparing corpus from {corpus_path.name}…", 0)
     elif corpus_text is not None:
@@ -124,6 +162,10 @@ def train(
         seed=cfg.seed,
         status_callback=status_callback,
         progress_callback=status_callback,
+        max_train_samples=(
+            cfg.max_steps_per_epoch * cfg.batch_size
+            if cfg.max_steps_per_epoch else None
+        ),
     )
 
     # ── Model ─────────────────────────────────────────────────────────────────
@@ -173,6 +215,7 @@ def train(
             logits = model(x)               # (batch, vocab_size)
             loss = criterion(logits, y)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
             train_loss_sum += loss.item()
 
@@ -186,17 +229,36 @@ def train(
 
         train_loss = train_loss_sum / max(batch_i + 1, 1)
 
-        _emit_status(status_callback, f"Epoch {epoch}/{cfg.epochs}: validating…", 95)
+        max_val = cfg.max_val_steps if cfg.max_val_steps is not None else max_steps
+        _emit_status(
+            status_callback,
+            f"Epoch {epoch}/{cfg.epochs}: validating (up to {max_val} batches)…",
+            95,
+        )
 
-        # Validate
+        # Validate — use a separate cap so quantum eval-mode cost stays bounded
         model.eval()
         val_loss_sum = 0.0
         n_val_batches = 0
+        val_error: str | None = None
         with torch.no_grad():
             for val_i, (x, y) in enumerate(val_loader):
-                logits = model(x)
-                val_loss_sum += criterion(logits, y).item()
+                if max_val and val_i >= max_val:
+                    break
+                try:
+                    logits = model(x)
+                    val_loss_sum += criterion(logits, y).item()
+                except Exception as exc:
+                    val_error = f"Epoch {epoch} val batch {val_i + 1}: {type(exc).__name__}: {exc}"
+                    _emit_status(status_callback, f"[ERROR] {val_error}", 95)
+                    break
                 n_val_batches += 1
+                if status_callback and val_i % 5 == 4:
+                    _emit_status(
+                        status_callback,
+                        f"Epoch {epoch}/{cfg.epochs}: validating (batch {val_i + 1}/{max_val})…",
+                        95 + 4 * (val_i + 1) / max_val,
+                    )
         val_loss = val_loss_sum / max(n_val_batches, 1)
 
         # Sample generation

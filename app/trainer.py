@@ -147,8 +147,11 @@ def start_training(
     batch_size: int = 8,
     gen_every: int = 10,
     seed: int = 42,
+    max_steps_per_epoch: int | None = 200,
+    max_val_steps: int | None = 20,
     valid_corpus_text: str | None = None,
     valid_path: Path | None = None,
+    normalize: bool = True,
 ) -> str:
     """
     Kick off a training job in a background thread.
@@ -167,6 +170,9 @@ def start_training(
         batch_size=batch_size,
         gen_every=gen_every,
         seed=seed,
+        max_steps_per_epoch=max_steps_per_epoch,
+        max_val_steps=max_val_steps,
+        normalize=normalize,
         corpus=None,   # we pass text directly below
         out_dir=str(MODEL_DIR),
         checkpoint_name=CHECKPOINT_PATH.name,
