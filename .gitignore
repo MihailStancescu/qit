@@ -46,6 +46,10 @@ desktop.ini
 # Paper drafts, LaTeX sources, and build artifacts (kept locally, not public)
 paper/
 
+# Local learning curriculum (kept locally, not public)
+CURRICULUM.md
+curriculum.html
+
 # Training data (large corpora — download locally)
 train_data/
 
